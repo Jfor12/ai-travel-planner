@@ -1,0 +1,7 @@
+# Secrets
+.env
+.venv/
+__pycache__/
+
+# Mac system files
+.DS_Store
