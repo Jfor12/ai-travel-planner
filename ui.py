@@ -60,7 +60,7 @@ def run_app():
         # Author signature / contact (adjust links as needed)
         st.markdown(
             "---\n"
-            "**Built by:** Jacopo Fornesi  \\n+"
+            "**Built by:** Jacopo Fornesi   "
             "[LinkedIn](https://www.linkedin.com/in/jacopo-fornesi) • "
             "[GitHub](https://github.com/Jfor12) • "
             "[Email](mailto:jacopofornesi@hotmail.com)",
