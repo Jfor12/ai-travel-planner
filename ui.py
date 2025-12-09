@@ -16,11 +16,8 @@ except Exception as e:
 
 # --- CONSTANTS ---
 POPULAR_CITIES = [
-    "Paris, France", "London, UK", "New York, USA", "Tokyo, Japan", 
-    "Rome, Italy", "Sydney, Australia", "Cape Town, South Africa", 
-    "Rio de Janeiro, Brazil", "Dubai, UAE", "Singapore", "Barcelona, Spain",
-    "Kyoto, Japan", "Bangkok, Thailand", "Istanbul, Turkey", "Marrakech, Morocco",
-    "Lisbon, Portugal", "Seoul, South Korea", "Mexico City, Mexico"
+    "Paris, France", "London, UK",
+    "Rome, Italy", "Dubai, UAE"
 ]
 
 MONTHS = [
