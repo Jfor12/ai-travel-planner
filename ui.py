@@ -57,6 +57,16 @@ def run_app():
                 st.session_state['active_trip_id'] = None
                 st.rerun()
 
+        # Author signature / contact (adjust links as needed)
+        st.markdown(
+            "---\n"
+            "**Built by:** Jacopo Fornesi  \\n+"
+            "[LinkedIn](https://www.linkedin.com/in/jacopo-fornesi) • "
+            "[GitHub](https://github.com/Jfor12) • "
+            "[Email](mailto:jacopofornesi@hotmail.com)",
+            unsafe_allow_html=True,
+        )
+
     # --- PAGE 1: NEW SEARCH ---
     if selected == "New Search":
         st.session_state["chat_history"] = []
