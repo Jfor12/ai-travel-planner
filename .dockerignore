@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.env
+.env.*
+.venv/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# Git
+.git
+.gitignore
+
+# Docker
+docker-compose*.yml
+
+# Build artifacts
+dist/
+build/
+
+# Streamlit cache / runtime
+.streamlit/
