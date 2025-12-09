@@ -30,10 +30,10 @@ USER appuser
 # Streamlit environment defaults for container usage
 ENV PYTHONUNBUFFERED=1 \
     STREAMLIT_SERVER_HEADLESS=true \
-    STREAMLIT_SERVER_PORT=8501 \
     STREAMLIT_SERVER_ENABLECORS=false
 
-EXPOSE 8501
+# Cloud Run supplies a runtime PORT environment variable. Use 8080 by default
+EXPOSE 8080
 
-# Run the app
-CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Use shell form so the runtime $PORT (set by Cloud Run) is honored. Falls back to 8080.
+CMD ["sh", "-c", "streamlit run app.py --server.port=${PORT:-8080} --server.address=0.0.0.0"]
