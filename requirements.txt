@@ -9,3 +9,5 @@ langchain-groq==0.1.9
 duckduckgo-search==6.2.0
 thefuzz
 tavily-python
+pandas fpdf
+pydeck
