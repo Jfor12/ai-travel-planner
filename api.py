@@ -295,9 +295,13 @@ async def get_itinerary(trip_id: int):
         if not details:
             raise HTTPException(status_code=404, detail="Itinerary not found")
         
+        # Extract locations from the guide text
+        locations = extract_map_data(details[1])
+        
         return {
             "destination": details[0],
-            "guide_text": details[1]
+            "guide_text": details[1],
+            "locations": locations
         }
     except HTTPException:
         raise

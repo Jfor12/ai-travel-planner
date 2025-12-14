@@ -744,8 +744,9 @@
 
                 const data = await response.json();
                 
-                const mapHtml = `<div id="map"></div>`;
-                const tripHtml = `
+                // Use the same layout structure as displayResults
+                contentArea.innerHTML = `
+                    <div id="map"></div>
                     <div>
                         <div class="intel-section">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -769,8 +770,6 @@
                         </div>
                     </div>
                 `;
-
-                contentArea.innerHTML = mapHtml + tripHtml;
 
                 // Initialize map after DOM update
                 setTimeout(() => {
