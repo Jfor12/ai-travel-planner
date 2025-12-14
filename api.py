@@ -300,13 +300,8 @@ async def get_itinerary(trip_id: int):
         
         # Convert DataFrame to array of objects
         locations = []
-        if isinstance(locations_df, dict) and 'name' in locations_df:
-            for i in range(len(locations_df['name'])):
-                locations.append({
-                    "name": locations_df['name'][str(i)],
-                    "lat": locations_df['lat'][str(i)],
-                    "lon": locations_df['lon'][str(i)]
-                })
+        if not locations_df.empty:
+            locations = locations_df.to_dict('records')
         
         return {
             "destination": details[0],
