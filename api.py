@@ -66,7 +66,7 @@ class LocationData(BaseModel):
 
 
 # ============================================================================
-# HEALTH CHECK
+# HEALTH CHECK & INITIALIZATION
 # ============================================================================
 
 @app.get("/health")
@@ -78,6 +78,49 @@ def health_check():
         "has_tavily_key": bool(os.getenv("TAVILY_API_KEY")),
         "has_database": bool(os.getenv("DATABASE_URL")),
     }
+
+
+@app.post("/api/init-db")
+def initialize_database():
+    """Initialize database tables (admin endpoint)"""
+    try:
+        if not os.getenv("DATABASE_URL"):
+            raise HTTPException(status_code=500, detail="DATABASE_URL not configured")
+        
+        import psycopg
+        conn = psycopg.connect(os.getenv("DATABASE_URL"), sslmode='require')
+        with conn.cursor() as cur:
+            # Create saved_itineraries table
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS saved_itineraries (
+                    id SERIAL PRIMARY KEY,
+                    destination VARCHAR(255) NOT NULL,
+                    trip_days INTEGER DEFAULT 0,
+                    itinerary_text TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create trip_chats table for chat history
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS trip_chats (
+                    id SERIAL PRIMARY KEY,
+                    trip_id INTEGER REFERENCES saved_itineraries(id) ON DELETE CASCADE,
+                    role VARCHAR(50) NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            conn.commit()
+        conn.close()
+        
+        return {
+            "success": True,
+            "message": "Database tables initialized successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================
