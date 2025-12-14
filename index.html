@@ -61,7 +61,7 @@
             align-items: flex-end;
         }
 
-        input[type="text"] {
+        input[type="text"], select {
             flex: 1;
             min-width: 150px;
             padding: 12px 15px;
@@ -69,12 +69,17 @@
             border-radius: 6px;
             font-size: 1em;
             transition: all 0.3s;
+            background: white;
         }
 
-        input[type="text"]:focus {
+        input[type="text"]:focus, select:focus {
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        select {
+            cursor: pointer;
         }
 
         button {
@@ -322,19 +327,36 @@
         <div class="main">
             <div class="form-section">
                 <div class="form-group">
-                    <input 
-                        type="text" 
-                        id="destination" 
-                        placeholder="Enter destination (e.g., Paris, Tokyo, Barcelona)" 
-                        autocomplete="off"
-                    >
-                    <input 
-                        type="text" 
-                        id="month" 
-                        placeholder="Month (e.g., March, July)" 
-                        autocomplete="off"
-                    >
+                    <select id="destination">
+                        <option value="">Select destination...</option>
+                        <option value="Paris">Paris, France</option>
+                        <option value="Tokyo">Tokyo, Japan</option>
+                        <option value="New York">New York, USA</option>
+                        <option value="London">London, UK</option>
+                        <option value="Dubai">Dubai, UAE</option>
+                        <option value="Barcelona">Barcelona, Spain</option>
+                        <option value="Rome">Rome, Italy</option>
+                        <option value="Bangkok">Bangkok, Thailand</option>
+                        <option value="Singapore">Singapore</option>
+                        <option value="Istanbul">Istanbul, Turkey</option>
+                    </select>
+                    <select id="month">
+                        <option value="">Select month...</option>
+                        <option value="January">January</option>
+                        <option value="February">February</option>
+                        <option value="March">March</option>
+                        <option value="April">April</option>
+                        <option value="May">May</option>
+                        <option value="June">June</option>
+                        <option value="July">July</option>
+                        <option value="August">August</option>
+                        <option value="September">September</option>
+                        <option value="October">October</option>
+                        <option value="November">November</option>
+                        <option value="December">December</option>
+                    </select>
                     <button id="generateBtn">Generate Guide</button>
+                    <button class="secondary" id="myTripsBtn">📚 My Trips</button>
                 </div>
             </div>
 
@@ -370,20 +392,26 @@
         const destInput = document.getElementById('destination');
         const monthInput = document.getElementById('month');
         const generateBtn = document.getElementById('generateBtn');
+        const myTripsBtn = document.getElementById('myTripsBtn');
         const contentArea = document.getElementById('contentArea');
         const alertContainer = document.getElementById('alertContainer');
 
         // Event Listeners
         generateBtn.addEventListener('click', handleGenerate);
-        destInput.addEventListener('keypress', (e) => e.key === 'Enter' && handleGenerate());
-        monthInput.addEventListener('keypress', (e) => e.key === 'Enter' && handleGenerate());
+        myTripsBtn.addEventListener('click', showMyTrips);
+        destInput.addEventListener('change', () => {
+            if (destInput.value && monthInput.value) generateBtn.style.animation = 'pulse 0.5s';
+        });
+        monthInput.addEventListener('change', () => {
+            if (destInput.value && monthInput.value) generateBtn.style.animation = 'pulse 0.5s';
+        });
 
         async function handleGenerate() {
             const destination = destInput.value.trim();
             const month = monthInput.value.trim();
 
             if (!destination || !month) {
-                showAlert('Please enter both destination and month', 'error');
+                showAlert('Please select both destination and month', 'error');
                 return;
             }
 
@@ -447,6 +475,10 @@
                                 `).join('')}
                             </div>
                         ` : ''}
+                        <div class="button-group">
+                            <button onclick="saveGuide('${data.destination}', '${data.month}', \`${data.intel.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">💾 Save Guide</button>
+                            <button onclick="exportPDF('${data.destination}', '${data.month}', \`${data.intel.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">📄 Export PDF</button>
+                        </div>
                         <div class="chat-section">
                             <h3>Ask a Question</h3>
                             <div class="chat-group">
@@ -551,6 +583,67 @@
             }
         }
 
+        async function saveGuide(destination, month, guideText) {
+            try {
+                const response = await fetch(`${API_URL}/api/save-itinerary`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        destination: destination,
+                        month: month,
+                        guide_text: guideText
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to save guide');
+                }
+
+                const data = await response.json();
+                showAlert('✅ Guide saved successfully!', 'success');
+
+            } catch (error) {
+                console.error('Save error:', error);
+                showAlert(`Error saving: ${error.message}`, 'error');
+            }
+        }
+
+        async function exportPDF(destination, month, guideText) {
+            try {
+                const response = await fetch(`${API_URL}/api/export-pdf`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        destination: destination,
+                        month: month,
+                        guide_text: guideText
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to export PDF');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${destination.replace(/\s+/g, '_')}_${month}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showAlert('✅ PDF downloaded successfully!', 'success');
+
+            } catch (error) {
+                console.error('Export error:', error);
+                showAlert(`Error exporting PDF: ${error.message}`, 'error');
+            }
+        }
+
         function markdownToHtml(markdown) {
             let html = markdown
                 // Headers
@@ -589,6 +682,100 @@
 
         function clearAlerts() {
             alertContainer.innerHTML = '';
+        }
+
+        async function showMyTrips() {
+            clearAlerts();
+            contentArea.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading your trips...</p></div>';
+
+            try {
+                const response = await fetch(`${API_URL}/api/itineraries`);
+                if (!response.ok) throw new Error('Failed to load trips');
+
+                const data = await response.json();
+                
+                if (data.trips.length === 0) {
+                    contentArea.innerHTML = `
+                        <div class="initial-state">
+                            <h3>No saved trips yet</h3>
+                            <p>Generate a guide and save it to see it here</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const tripsHtml = `
+                    <div style="grid-column: 1 / -1; padding: 20px;">
+                        <h2>📚 My Saved Trips</h2>
+                        <div style="display: grid; gap: 15px; margin-top: 20px;">
+                            ${data.trips.map(trip => `
+                                <div class="location-item" style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div onclick="viewTrip(${trip.id})" style="flex: 1; cursor: pointer;">
+                                        <div class="name">${trip.destination}</div>
+                                        <div class="coords">${new Date(trip.created_at).toLocaleDateString()}</div>
+                                    </div>
+                                    <div class="button-group" style="margin: 0;">
+                                        <button onclick="event.stopPropagation(); viewTrip(${trip.id})" style="padding: 8px 15px;">View</button>
+                                        <button onclick="event.stopPropagation(); deleteTrip(${trip.id})" style="padding: 8px 15px; background: #dc3545;">Delete</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                contentArea.innerHTML = tripsHtml;
+
+            } catch (error) {
+                console.error('Error loading trips:', error);
+                showAlert(`Error loading trips: ${error.message}`, 'error');
+            }
+        }
+
+        async function viewTrip(tripId) {
+            clearAlerts();
+            contentArea.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading trip details...</p></div>';
+
+            try {
+                const response = await fetch(`${API_URL}/api/itinerary/${tripId}`);
+                if (!response.ok) throw new Error('Failed to load trip');
+
+                const data = await response.json();
+                
+                contentArea.innerHTML = `
+                    <div style="grid-column: 1 / -1; padding: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h2>${data.destination}</h2>
+                            <button onclick="showMyTrips()">← Back to My Trips</button>
+                        </div>
+                        <div class="intel-content">
+                            ${markdownToHtml(data.guide_text)}
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                console.error('Error viewing trip:', error);
+                showAlert(`Error viewing trip: ${error.message}`, 'error');
+            }
+        }
+
+        async function deleteTrip(tripId) {
+            if (!confirm('Are you sure you want to delete this trip?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/itinerary/${tripId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Failed to delete trip');
+
+                showAlert('✅ Trip deleted successfully!', 'success');
+                showMyTrips(); // Refresh the list
+
+            } catch (error) {
+                console.error('Error deleting trip:', error);
+                showAlert(`Error deleting trip: ${error.message}`, 'error');
+            }
         }
 
         // Check API availability on load

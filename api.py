@@ -5,6 +5,7 @@ Serves REST endpoints for AI generation, map data, and persistence
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import Optional, List
 import os
@@ -12,8 +13,8 @@ from dotenv import load_dotenv
 
 # Import core modules
 from ai import generate_intel, run_chat_response, generate_place_summary
-from maps import extract_map_data
-from db import save_itinerary, get_connection
+from maps import extract_map_data, create_pdf
+from db import save_itinerary, get_connection, get_history, get_itinerary_details, update_itinerary, delete_itinerary
 
 # Load environment variables
 load_dotenv()
@@ -193,6 +194,112 @@ async def save_guide(request: SaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/export-pdf")
+async def export_pdf(request: SaveRequest):
+    """
+    Export a travel guide as a PDF document.
+    """
+    try:
+        pdf_bytes = create_pdf(request.destination, request.guide_text)
+        
+        filename = f"{request.destination.replace(' ', '_')}_{request.month}.pdf"
+        
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/itineraries")
+async def get_all_itineraries():
+    """
+    Get list of all saved itineraries.
+    """
+    try:
+        if not os.getenv("DATABASE_URL"):
+            raise HTTPException(status_code=500, detail="DATABASE_URL not configured")
+        
+        trips = get_history()
+        return {
+            "trips": [
+                {
+                    "id": trip[0],
+                    "destination": trip[1],
+                    "created_at": trip[2].isoformat() if trip[2] else None
+                }
+                for trip in trips
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/itinerary/{trip_id}")
+async def get_itinerary(trip_id: int):
+    """
+    Get details of a specific itinerary.
+    """
+    try:
+        if not os.getenv("DATABASE_URL"):
+            raise HTTPException(status_code=500, detail="DATABASE_URL not configured")
+        
+        details = get_itinerary_details(trip_id)
+        if not details:
+            raise HTTPException(status_code=404, detail="Itinerary not found")
+        
+        return {
+            "destination": details[0],
+            "guide_text": details[1]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/itinerary/{trip_id}")
+async def update_trip(trip_id: int, request: SaveRequest):
+    """
+    Update an existing itinerary.
+    """
+    try:
+        if not os.getenv("DATABASE_URL"):
+            raise HTTPException(status_code=500, detail="DATABASE_URL not configured")
+        
+        update_itinerary(trip_id, request.guide_text)
+        
+        return {
+            "success": True,
+            "message": "Itinerary updated successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/itinerary/{trip_id}")
+async def delete_trip(trip_id: int):
+    """
+    Delete an itinerary.
+    """
+    try:
+        if not os.getenv("DATABASE_URL"):
+            raise HTTPException(status_code=500, detail="DATABASE_URL not configured")
+        
+        delete_itinerary(trip_id)
+        
+        return {
+            "success": True,
+            "message": "Itinerary deleted successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============================================================================
 # ROOT ENDPOINT
 # ============================================================================
@@ -209,6 +316,11 @@ def root():
             "generate_intel": "POST /api/generate-intel",
             "chat": "POST /api/chat",
             "save_itinerary": "POST /api/save-itinerary",
+            "export_pdf": "POST /api/export-pdf",
+            "get_itineraries": "GET /api/itineraries",
+            "get_itinerary": "GET /api/itinerary/{trip_id}",
+            "update_itinerary": "PUT /api/itinerary/{trip_id}",
+            "delete_itinerary": "DELETE /api/itinerary/{trip_id}",
         }
     }
 
