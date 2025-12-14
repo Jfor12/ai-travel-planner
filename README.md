@@ -3,23 +3,6 @@
 An interactive pre-trip intelligence generator: enter a destination and month, the app queries live sources, summarizes useful local advice, extracts key locations (with coordinates) and renders them on an attractive dark basemap. Export PDF briefings and persist guides to a Postgres database.
 
 **Highlights**
-- **Streamlit UI:** fast, single-file app for live demos and prototypes.
-- **LLM-powered briefs:** Groq (Llama 3) via LangChain for concise local intelligence and extraction.
-- **Map visualization:** PyDeck (Mapbox Dark when `MAPBOX_API_KEY` is provided) with labeled pins and offset labels to avoid overlap.
-- **Persistence & export:** save guides to Postgres and download as PDF.
-
-**Status:** Demo-ready. Includes a `Dockerfile` for containerized deployment.
-
-## Table of contents
-
-- Project overview
-- Quick start (local)
-- Docker usage
- # 🌍 AI Travel Planner
-
-An interactive pre-trip intelligence generator: enter a destination and month, the app queries live sources, summarizes useful local advice, extracts key locations (with coordinates) and renders them on an attractive dark basemap. Export PDF briefings and persist guides to a Postgres database.
-
-**Highlights**
 - **Streamlit UI:** modularized into maintainable components (`app.py`, `ui.py`, `ai.py`, `maps.py`, `db.py`).
 - **LLM-powered briefs:** Groq (Llama 3) via LangChain for concise local intelligence and extraction.
 - **Map visualization:** PyDeck (Mapbox Dark when `MAPBOX_API_KEY` is provided) with labeled pins and offset labels to avoid overlap.
@@ -37,7 +20,6 @@ An interactive pre-trip intelligence generator: enter a destination and month, t
 - Database schema
 - Limitations & known issues
 - Security, privacy & cost considerations
-- Testing, debugging & troubleshooting
 - Next steps / optional changes
 
 ## Project overview
@@ -57,8 +39,6 @@ This tool is meant for building short, practical pre-trip briefings. It:
 - `maps.py`: map rendering, coordinate extraction, PDF creation and helper URLs.
 - `db.py`: database connection and persistence helpers (save/load itineraries and chats).
 - `scripts/check_env.py`: helper script to verify required env vars and test DB connectivity.
-- `tests/`: comprehensive test suite with unit and integration tests.
-- `run_tests.sh`: convenient test runner script with multiple testing options.
 
 ## Quick Start (Local)
 
@@ -165,74 +145,7 @@ You can run these statements with `psql` or any Postgres client. I can add a `mi
 - Limit API keys to specific services (where supported) and rotate keys regularly.
 - Use managed DBs with network restrictions and SSL (Neon/Supabase recommended).
 
-## Testing, debugging & troubleshooting
-
-### Comprehensive Test Suite
-
-This project includes a professional testing suite with unit tests, integration tests, and CI/CD automation.
-
-**Test Coverage:**
-- ✅ Unit tests for all core modules (ai.py, db.py, maps.py)
-- ✅ Integration tests for end-to-end workflows
-- ✅ Performance and security tests
-- ✅ Automated CI/CD pipeline with GitHub Actions
-- ✅ Code coverage reporting
-
-**Running Tests:**
-
-```bash
-# Quick test run
-./run_tests.sh all
-
-# Run with coverage report
-./run_tests.sh coverage
-
-# Run specific test categories
-./run_tests.sh unit           # Unit tests only
-./run_tests.sh integration    # Integration tests only
-./run_tests.sh quick          # Skip slow tests
-
-# Code quality checks
-./run_tests.sh lint           # Linting and formatting
-./run_tests.sh security       # Security scans
-
-# View coverage report
-./run_tests.sh show-coverage
-```
-
-**Manual pytest commands:**
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=. --cov-report=html --cov-report=term-missing
-
-# Run specific test file
-pytest tests/test_ai.py -v
-
-# Run specific test class
-pytest tests/test_ai.py::TestGenerateIntel -v
-
-# Run with detailed output
-pytest -v -s
-```
-
-**CI/CD Pipeline:**
-
-Every push and pull request triggers:
-- Test suite on Python 3.9, 3.10, 3.11
-- Code quality checks (flake8, black, isort)
-- Security scans (safety, bandit)
-- Coverage reporting to Codecov
-- Docker image build validation
-
-See `.github/workflows/ci-cd.yml` for full pipeline configuration.
-
-**Test Documentation:**
-
-For detailed testing documentation, see [docs/TESTING.md](docs/TESTING.md)
+## Debugging & troubleshooting
 
 ### Environment Validation
 
@@ -264,21 +177,7 @@ python -m py_compile app.py ui.py ai.py db.py maps.py
 
 - Add automated DB migration (`migrations/` and an init script).
 - Add caching for generated guides to reduce API calls and speed up repeat views.
-- ~Add a GitHub Actions workflow to build and publish the Docker image on push.~ ✅ **Done - CI/CD pipeline implemented**
-- Expand test coverage to include UI component testing
-- Add performance benchmarking suite
-- Implement load testing for production readiness
+- Implement load testing for production readiness.
+### Common Issues
 
-## Testing & Code Quality
-
-This project demonstrates professional software engineering practices:
-
-- **80%+ test coverage** across all modules
-- **Automated CI/CD** with GitHub Actions
-- **Type hints and documentation** for maintainability
-- **Security scanning** (bandit, safety)
-- **Code quality checks** (flake8, black, isort)
-- **Mocked external dependencies** for reliable testing
-- **Integration tests** for end-to-end workflows
-
-Run `./run_tests.sh` to see all testing options.
+**Import Errors:** Ensure all dependencies are installed: `pip install -r requirements.txt`
