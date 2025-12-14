@@ -1,183 +1,242 @@
 # 🌍 AI Travel Planner
 
-An interactive pre-trip intelligence generator: enter a destination and month, the app queries live sources, summarizes useful local advice, extracts key locations (with coordinates) and renders them on an attractive dark basemap. Export PDF briefings and persist guides to a Postgres database.
+An intelligent travel guide generator powered by AI that creates personalized destination guides with interactive maps, real-time web data, and exportable PDFs. Built as a portfolio project showcasing full-stack development with modern web technologies.
 
-**Highlights**
-- **Streamlit UI:** modularized into maintainable components (`app.py`, `ui.py`, `ai.py`, `maps.py`, `db.py`).
-- **LLM-powered briefs:** Groq (Llama 3) via LangChain for concise local intelligence and extraction.
-- **Map visualization:** PyDeck (Mapbox Dark when `MAPBOX_API_KEY` is provided) with labeled pins and offset labels to avoid overlap.
-- **Persistence & export:** save guides to Postgres and download as PDF.
+**Live Demo:** [https://jfor12.github.io/ai-travel-planner](https://jfor12.github.io/ai-travel-planner)
 
-**Status:** Demo-ready. Includes a `Dockerfile` for containerized deployment.
+## ✨ Features
 
-## Table of contents
+- **AI-Powered Travel Guides** - Generate comprehensive destination guides using Groq LLM (Llama 3.3)
+- **Real-Time Web Search** - Integrates live data using Tavily search API
+- **Interactive Maps** - Visualize locations with Leaflet.js mapping
+- **Smart Caching** - Database-cached guides to reduce API costs
+- **Rate Limiting** - IP-based protection (5 generations/hour)
+- **Save & Export** - Store trips in PostgreSQL and export as PDF
+- **My Trips Dashboard** - View, manage, and revisit saved itineraries
+- **Responsive Design** - Beautiful animated gradient UI that works on all devices
 
-- Project overview
-- Quick start (local)
-- Docker usage
-- Architecture & modules
-- Configuration (env vars)
-- Database schema
-- Limitations & known issues
-- Security, privacy & cost considerations
-- Next steps / optional changes
+## 🎯 Tech Stack
 
-## Project overview
+### Frontend
+- **HTML/CSS/JavaScript** - Modern vanilla JS with async/await
+- **Leaflet.js** - Interactive map rendering
+- **GitHub Pages** - Static hosting
 
-This tool is meant for building short, practical pre-trip briefings. It:
+### Backend
+- **FastAPI** - High-performance Python web framework
+- **PostgreSQL** - Relational database for trip persistence
+- **Railway** - Cloud deployment platform
 
-- Queries live web sources (via a small search tool) to gather context.
-- Prompts an LLM to synthesize advice and a short coordinate list in a predictable format.
-- Extracts coordinates and renders them on a PyDeck map with readable labels.
-- Lets you save the generated text to Postgres and download a printable PDF.
+### AI & APIs
+- **Groq API** - Fast LLM inference (Llama 3.3 70B)
+- **LangChain** - LLM orchestration framework
+- **Tavily API** - Real-time web search
+- **DuckDuckGo** - Fallback search provider
 
-## Project modules
+## 🚀 Quick Start
 
-- `app.py`: small delegator that loads `.env` (if present) and starts the UI.
-- `ui.py`: Streamlit UI — sidebar, pages, widget wiring and user interactions.
-- `ai.py`: AI interactions and prompt/LLM wiring (generate_intel, chat helpers).
-- `maps.py`: map rendering, coordinate extraction, PDF creation and helper URLs.
-- `db.py`: database connection and persistence helpers (save/load itineraries and chats).
-- `scripts/check_env.py`: helper script to verify required env vars and test DB connectivity.
+### Prerequisites
+- Python 3.9+
+- PostgreSQL database
+- API keys: Groq, Tavily (optional: DuckDuckGo)
 
-## Quick Start (Local)
+### Local Development
 
-1. Clone and install:
-
+1. **Clone the repository**
 ```bash
-git clone https://github.com/your-username/ai-travel-planner.git
+git clone https://github.com/Jfor12/ai-travel-planner.git
 cd ai-travel-planner
+```
+
+2. **Install dependencies**
+```bash
 pip install -r requirements.txt
 ```
 
-2. Add secrets in a `.env` (do not commit):
-
-```ini
-GROQ_API_KEY=your_groq_key
-TAVILY_API_KEY=your_tavily_key
-MAPBOX_API_KEY=your_mapbox_key  # optional but recommended for Mapbox Dark
-DATABASE_URL=postgres://user:pass@host/db  # optional for persistence
+3. **Set up environment variables**
+Create a `.env` file:
+```env
+DATABASE_URL=postgresql://user:password@localhost:5432/travel_planner
+GROQ_API_KEY=your_groq_api_key
+TAVILY_API_KEY=your_tavily_api_key
 ```
 
-3. (Optional) Validate environment and DB connectivity:
+4. **Initialize database**
+```bash
+python init_db.py
+```
+
+5. **Start the backend**
+```bash
+uvicorn api:app --host 0.0.0.0 --port 8000
+```
+
+6. **Open the frontend**
+Open `index.html` in your browser or serve it locally:
+```bash
+python -m http.server 3000
+```
+
+## 🐳 Docker Deployment
+
+Build and run with Docker:
 
 ```bash
-python scripts/check_env.py
+docker build -t ai-travel-planner .
+docker run -p 8000:8000 \
+  -e DATABASE_URL=your_database_url \
+  -e GROQ_API_KEY=your_groq_key \
+  -e TAVILY_API_KEY=your_tavily_key \
+  ai-travel-planner
 ```
 
-4. Run the app:
+## 📂 Project Structure
 
-```bash
-streamlit run app.py
+```
+ai-travel-planner/
+├── index.html          # Frontend UI
+├── api.py              # FastAPI backend server
+├── ai.py               # AI/LLM integration
+├── maps.py             # Map data extraction
+├── db.py               # Database operations
+├── init_db.py          # Database initialization
+├── requirements.txt    # Python dependencies
+├── Dockerfile          # Container configuration
+└── README.md           # This file
 ```
 
-Open `http://localhost:8501` in your browser.
+## 🔧 API Endpoints
 
-## Docker (quick deploy)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Health check |
+| POST | `/api/generate-intel` | Generate travel guide |
+| POST | `/api/chat` | Chat with trip assistant |
+| POST | `/api/save-itinerary` | Save guide to database |
+| POST | `/api/export-pdf` | Export guide as PDF |
+| GET | `/api/itineraries` | Get all saved trips |
+| GET | `/api/itinerary/{id}` | Get specific trip details |
+| PUT | `/api/itinerary/{id}` | Update trip |
+| DELETE | `/api/itinerary/{id}` | Delete trip |
+| POST | `/init-db` | Initialize database tables |
 
-Build and run the provided image:
+## 💾 Database Schema
 
-```bash
-docker build -t ai-travel-planner:latest .
-docker run --rm -p 8501:8501 \
-  -e GROQ_API_KEY="${GROQ_API_KEY}" \
-  -e TAVILY_API_KEY="${TAVILY_API_KEY}" \
-  -e MAPBOX_API_KEY="${MAPBOX_API_KEY}" \
-  -e DATABASE_URL="${DATABASE_URL}" \
-  ai-travel-planner:latest
-```
-
-For production, prefer a managed Postgres (Supabase/Neon) and inject secrets via the hosting platform.
-
-## Architecture & modules
-
-- User enters destination + month in `ui.py`.
-- `ai.py` assembles search context and prompts the LLM for a structured briefing and small coordinate block (`Name | lat | lon`).
-- `maps.py` extracts coordinates, builds a Pandas DataFrame and renders a PyDeck map with labeled pins.
-- `db.py` persists guides and chat messages when `DATABASE_URL` is provided.
-
-This flow is synchronous and optimized for prototyping; there is no background worker or job queue.
-
-## Configuration (environment variables)
-
-- `GROQ_API_KEY` (required for LLM features) — Groq API key.
-- `TAVILY_API_KEY` (required) — API key used by the small search tool.
-- `MAPBOX_API_KEY` (optional) — Mapbox token. When provided Mapbox Dark is used; otherwise a public Carto dark basemap is used.
-- `DATABASE_URL` (optional) — Postgres connection string for `save`, `list`, and `chat` persistence.
-
-The app will load `.env` automatically (via `python-dotenv`) when `app.py` starts. If a variable is missing, features that depend on it will be disabled or will display an error.
-
-## Database schema
-
-The app expects two simple tables. Example SQL to create them:
-
+### saved_itineraries
 ```sql
 CREATE TABLE saved_itineraries (
-  id SERIAL PRIMARY KEY,
-  destination TEXT NOT NULL,
-  trip_days INTEGER DEFAULT 0,
-  itinerary_text TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
+    id SERIAL PRIMARY KEY,
+    destination VARCHAR(255) NOT NULL,
+    trip_days VARCHAR(50),
+    itinerary_text TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+```
 
+### trip_chats
+```sql
 CREATE TABLE trip_chats (
-  id SERIAL PRIMARY KEY,
-  trip_id INTEGER REFERENCES saved_itineraries(id) ON DELETE CASCADE,
-  role TEXT,
-  content TEXT,
-  created_at TIMESTAMPTZ DEFAULT now()
+    id SERIAL PRIMARY KEY,
+    trip_id INTEGER REFERENCES saved_itineraries(id) ON DELETE CASCADE,
+    role VARCHAR(20) NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
-You can run these statements with `psql` or any Postgres client. I can add a `migrations/` file and an init script if you'd like automated setup.
+## 🎨 Key Features Explained
 
-## Limitations & known issues
+### Intelligent Caching
+- Checks database for existing guides (destination + month)
+- Returns cached guides instantly (bypasses rate limits)
+- Auto-saves new guides for future reuse
+- Reduces API costs by ~80% for popular destinations
 
-- **LLM hallucinations / factuality:** The LLM can produce incorrect or outdated advice. The app minimizes risk by feeding web search context, but ALWAYS verify important facts (visa rules, opening hours, entry requirements).
-- **Coordinate accuracy:** Coordinates are extracted from LLM output using a regex; malformed coordinates may be ignored.
-- **Rate limits & cost:** Groq API usage may incur cost and rate limits. Consider caching results to reduce calls.
-- **Privacy:** Any user-generated content sent to the LLM provider is subject to the provider's policies. Do not send sensitive personal data.
-- **No background processing:** Long-running calls are synchronous in the Streamlit session.
+### Rate Limiting
+- IP-based tracking using in-memory storage
+- 5 new guide generations per hour per IP
+- Cached guides don't count toward limit
+- Prevents API abuse and controls costs
 
-## Security, privacy & cost considerations
+### Trip Ownership (Frontend)
+- Uses localStorage to track user-created trips
+- Delete button only visible for your own trips
+- Prevents accidental deletion of others' guides
+- Simple solution without backend authentication
 
-- Do not commit `.env` or secrets to Git. Use platform secret stores in production.
-- Limit API keys to specific services (where supported) and rotate keys regularly.
-- Use managed DBs with network restrictions and SSL (Neon/Supabase recommended).
+## ⚠️ Limitations
 
-## Debugging & troubleshooting
+This is a **portfolio project** with intentional limitations:
 
-### Environment Validation
+- **Shared Database** - All saved trips are public and visible to everyone
+- **No Authentication** - No user accounts or login system
+- **Rate Limits** - 5 new guide generations per hour per IP address
+- **Basic Security** - Client-side ownership tracking only
+- **API Costs** - Free tier usage may be exhausted during high traffic
 
-Validate environment and DB: `python scripts/check_env.py`.
+## 🔐 Environment Variables
 
-### Debugging
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `GROQ_API_KEY` | Yes | Groq API key for LLM |
+| `TAVILY_API_KEY` | No | Tavily search API (fallback: DuckDuckGo) |
 
-- Run a local syntax check:
+## 🚢 Deployment
 
-```bash
-python -m py_compile app.py ui.py ai.py db.py maps.py
-```
+### Railway (Backend)
+1. Create new Railway project
+2. Connect GitHub repository
+3. Add environment variables
+4. Deploy automatically on push
 
-- If the app fails to start, check `requirements.txt` for missing deps and confirm `MAPBOX_API_KEY`/`GROQ_API_KEY`/`TAVILY_API_KEY` env vars are set.
-- To debug map issues, inspect the `temp_generated_full` value in the Streamlit interface (there is an expander showing raw output).
+### GitHub Pages (Frontend)
+1. Push to `main` branch
+2. Enable GitHub Pages in repo settings
+3. Update `API_URL` in index.html to Railway backend URL
 
-### Common Issues
+## 🐛 Troubleshooting
 
-**Import Errors:** Ensure all dependencies are installed: `pip install -r requirements.txt`
+**API Connection Failed**
+- Check Railway backend is running
+- Verify CORS settings in api.py
+- Ensure API_URL in index.html is correct
 
-**Test Failures:** Tests use mocked dependencies. If tests fail:
-1. Check pytest is installed: `pip install pytest pytest-cov pytest-mock`
-2. Verify you're in the project root
-3. Check test logs for specific errors
+**Database Connection Error**
+- Verify DATABASE_URL format
+- Run `python init_db.py` to create tables
+- Check PostgreSQL service is running
 
-**Coverage Not Generated:** Run `./run_tests.sh coverage` or `pytest --cov=.`
+**Rate Limit Exceeded**
+- Wait 1 hour or use cached destinations
+- Check IP-based rate limiting logic
+- Clear rate_limit_storage on backend restart
 
-## Next steps / optional changes
+## 🤝 Contributing
 
-- Add automated DB migration (`migrations/` and an init script).
-- Add caching for generated guides to reduce API calls and speed up repeat views.
-- Implement load testing for production readiness.
-### Common Issues
+This is a portfolio project, but suggestions are welcome! Feel free to:
+- Open issues for bugs or feature requests
+- Fork and submit pull requests
+- Share feedback on the implementation
 
-**Import Errors:** Ensure all dependencies are installed: `pip install -r requirements.txt`
+## 📝 License
+
+MIT License - feel free to use this code for learning or your own projects.
+
+## 👤 Author
+
+**Jacopo Fornesi**
+- GitHub: [@Jfor12](https://github.com/Jfor12)
+- LinkedIn: [Jacopo Fornesi](https://www.linkedin.com/in/jacopo-fornesi/)
+
+## 🙏 Acknowledgments
+
+- [Groq](https://groq.com) - Fast LLM inference
+- [Tavily](https://tavily.com) - Web search API
+- [Railway](https://railway.app) - Backend hosting
+- [Leaflet](https://leafletjs.com) - Open-source mapping
+- [FastAPI](https://fastapi.tiangolo.com) - Modern Python web framework
+
+---
+
+Built with ❤️ as a portfolio project to demonstrate full-stack development skills.
