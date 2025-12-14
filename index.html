@@ -663,9 +663,12 @@
                 .replace(/^\* (.*?)$/gm, '<li>$1</li>')
                 .replace(/^\- (.*?)$/gm, '<li>$1</li>')
                 .replace(/(<li>.*?<\/li>)/s, '<ul>$1</ul>')
-                // Remove coordinate blocks
-                .replace(/\(---PAGE BREAK---\)[\s\S]*?(?=<h|$)/g, '')
-                .replace(/COORDINATES[\s\S]*?(?=<h|$)/gi, '');
+                // Remove coordinate blocks and page breaks
+                .replace(/\(---PAGE BREAK---\)[^\n]*/gi, '')
+                .replace(/---PAGE BREAK---[^\n]*/gi, '')
+                .replace(/\(---page break---\)[^\n]*/gi, '')
+                .replace(/COORDINATES[\s\S]*?(?=##|###|$)/gi, '')
+                .replace(/List \d+-\d+ major locations[\s\S]*?(?=##|###|$)/gi, '');
 
             return `<p>${html}</p>`.replace(/<p><\/p>/g, '');
         }
@@ -741,17 +744,42 @@
 
                 const data = await response.json();
                 
-                contentArea.innerHTML = `
-                    <div style="grid-column: 1 / -1; padding: 20px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <h2>${data.destination}</h2>
-                            <button onclick="showMyTrips()">← Back to My Trips</button>
-                        </div>
-                        <div class="intel-content">
-                            ${markdownToHtml(data.guide_text)}
+                const mapHtml = `<div id="map"></div>`;
+                const tripHtml = `
+                    <div>
+                        <div class="intel-section">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h2>${data.destination}</h2>
+                                <button onclick="showMyTrips()">← Back to My Trips</button>
+                            </div>
+                            <div class="intel-content">
+                                ${markdownToHtml(data.guide_text)}
+                            </div>
+                            ${data.locations && data.locations.length > 0 ? `
+                                <div class="location-list">
+                                    <h3>📍 Locations (${data.locations.length})</h3>
+                                    ${data.locations.map((loc, i) => `
+                                        <div class="location-item" onclick="focusLocation(${loc.lat}, ${loc.lon})">
+                                            <div class="name">${loc.name}</div>
+                                            <div class="coords">${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;
+
+                contentArea.innerHTML = mapHtml + tripHtml;
+
+                // Initialize map after DOM update
+                setTimeout(() => {
+                    if (data.locations && data.locations.length > 0) {
+                        initializeMap(data.locations);
+                    } else {
+                        document.getElementById('map').innerHTML = '<p style="padding: 20px; text-align: center; color: #999;">No locations found in this guide</p>';
+                    }
+                }, 0);
 
             } catch (error) {
                 console.error('Error viewing trip:', error);
