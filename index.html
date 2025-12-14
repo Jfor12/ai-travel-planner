@@ -348,6 +348,9 @@
         <header>
             <h1>🌍 AI Travel Planner</h1>
             <p>Get instant travel intelligence with destination guides and interactive maps</p>
+            <div style="margin-top: 15px; background: rgba(255, 255, 255, 0.1); padding: 12px 20px; border-radius: 8px; font-size: 0.9em; backdrop-filter: blur(10px);">
+                ⚠️ <strong>Portfolio Project:</strong> Public demo with shared database. Rate limited to 5 generations/hour. Saved trips are visible to all users.
+            </div>
         </header>
 
         <div class="main">
@@ -408,9 +411,9 @@
             text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
         ">
             <div style="margin-bottom: 15px;">
-                <p style="font-size: 1.1em; font-weight: 500; margin-bottom: 10px;">Created by Jfor12</p>
+                <p style="font-size: 1.1em; font-weight: 500; margin-bottom: 10px;">Created by Jacopo Fornesi</p>
                 <div style="display: flex; gap: 20px; justify-content: center; align-items: center;">
-                    <a href="https://github.com/Jfor12" target="_blank" rel="noopener noreferrer" 
+                    <a href="https://github.com/jacopofornesi" target="_blank" rel="noopener noreferrer" 
                        style="color: white; text-decoration: none; display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; transition: all 0.3s;"
                        onmouseover="this.style.background='rgba(255, 255, 255, 0.2)'; this.style.transform='translateY(-2px)'"
                        onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'; this.style.transform='translateY(0)'">
@@ -492,16 +495,24 @@
 
                 if (!response.ok) {
                     const error = await response.json();
+                    if (response.status === 429) {
+                        throw new Error('⏱️ Rate limit reached! You can generate 5 new guides per hour. Try viewing saved trips or wait a bit.');
+                    }
                     throw new Error(error.detail || 'Failed to generate guide');
                 }
 
                 const data = await response.json();
                 displayResults(data);
-                showAlert(`✅ Guide generated for ${destination}!`, 'success');
+                
+                if (data.cached) {
+                    showAlert(`⚡ Guide loaded from cache for ${destination}! (Instant & free - no API costs)`, 'success');
+                } else {
+                    showAlert(`✅ New guide generated for ${destination}!`, 'success');
+                }
 
             } catch (error) {
                 console.error('Error:', error);
-                showAlert(`Error: ${error.message}`, 'error');
+                showAlert(`${error.message}`, 'error');
             } finally {
                 generateBtn.disabled = false;
             }

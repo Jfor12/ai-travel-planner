@@ -3,18 +3,20 @@ FastAPI backend for AI Travel Planner
 Serves REST endpoints for AI generation, map data, and persistence
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict
 import os
+import time
+from collections import defaultdict
 from dotenv import load_dotenv
 
 # Import core modules
 from ai import generate_intel, run_chat_response, generate_place_summary
 from maps import extract_map_data, create_pdf
-from db import save_itinerary, get_connection, get_history, get_itinerary_details, update_itinerary, delete_itinerary
+from db import save_itinerary, get_connection, get_history, get_itinerary_details, update_itinerary, delete_itinerary, get_cached_guide
 
 # Load environment variables
 load_dotenv()
@@ -33,6 +35,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Rate limiting storage (IP -> [timestamp, timestamp, ...])
+rate_limit_storage: Dict[str, list] = defaultdict(list)
+RATE_LIMIT = 5  # requests per hour
+RATE_WINDOW = 3600  # 1 hour in seconds
+
+def check_rate_limit(ip: str) -> bool:
+    """Check if IP has exceeded rate limit. Returns True if allowed."""
+    now = time.time()
+    
+    # Clean old timestamps
+    rate_limit_storage[ip] = [ts for ts in rate_limit_storage[ip] if now - ts < RATE_WINDOW]
+    
+    # Check if under limit
+    if len(rate_limit_storage[ip]) >= RATE_LIMIT:
+        return False
+    
+    # Add current request
+    rate_limit_storage[ip].append(now)
+    return True
 
 
 # ============================================================================
@@ -128,7 +150,7 @@ def initialize_database():
 # ============================================================================
 
 @app.post("/api/generate-intel")
-async def generate_travel_intel(request: TravelRequest):
+async def generate_travel_intel(request: TravelRequest, http_request: Request):
     """
     Generate comprehensive travel intelligence for a destination.
     
@@ -136,8 +158,44 @@ async def generate_travel_intel(request: TravelRequest):
     - **month**: Month of travel (e.g., "March")
     
     Returns: Markdown-formatted intelligence with embedded coordinates
+    Rate limited to 5 requests per hour per IP
     """
     try:
+        # Get client IP
+        client_ip = http_request.client.host if http_request.client else "unknown"
+        
+        # Check cache first to avoid unnecessary API calls
+        if os.getenv("DATABASE_URL"):
+            cached = get_cached_guide(request.destination, request.month)
+            if cached:
+                full_intel = cached[0]
+                
+                # Extract coordinates from cached intel
+                df = extract_map_data(full_intel)
+                locations = []
+                if not df.empty:
+                    for _, row in df.iterrows():
+                        locations.append({
+                            "name": row["name"],
+                            "lat": float(row["lat"]),
+                            "lon": float(row["lon"])
+                        })
+                
+                return {
+                    "destination": request.destination,
+                    "month": request.month,
+                    "intel": full_intel,
+                    "locations": locations,
+                    "cached": True
+                }
+        
+        # Rate limit check (only for non-cached requests to save API costs)
+        if not check_rate_limit(client_ip):
+            raise HTTPException(
+                status_code=429,
+                detail=f"Rate limit exceeded. Maximum {RATE_LIMIT} new guide generations per hour. Try again later or search for a previously generated destination."
+            )
+        
         # Validate API keys
         if not os.getenv("GROQ_API_KEY") or not os.getenv("TAVILY_API_KEY"):
             raise HTTPException(
@@ -145,7 +203,7 @@ async def generate_travel_intel(request: TravelRequest):
                 detail="API keys not configured. Set GROQ_API_KEY and TAVILY_API_KEY."
             )
         
-        # Generate intelligence stream
+        # Generate intelligence stream (only if not cached)
         intel_parts = []
         for chunk in generate_intel(
             request.destination,
@@ -156,6 +214,13 @@ async def generate_travel_intel(request: TravelRequest):
             intel_parts.append(chunk)
         
         full_intel = "".join(intel_parts)
+        
+        # Auto-save to cache for future requests
+        if os.getenv("DATABASE_URL"):
+            try:
+                save_itinerary(request.destination, request.month, full_intel)
+            except:
+                pass  # Don't fail if save fails
         
         # Extract coordinates from the intel
         df = extract_map_data(full_intel)
@@ -173,6 +238,7 @@ async def generate_travel_intel(request: TravelRequest):
             "month": request.month,
             "intel": full_intel,
             "locations": locations,
+            "cached": False
         }
     
     except HTTPException:
