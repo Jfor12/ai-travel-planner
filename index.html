@@ -454,7 +454,7 @@
                                     type="text" 
                                     id="chatInput" 
                                     placeholder="Ask about the guide..."
-                                    data-guide="${btoa(data.intel)}"
+                                    data-guide="${encodeURIComponent(data.intel)}"
                                 >
                                 <button onclick="sendChat(this)">Ask</button>
                             </div>
@@ -514,7 +514,7 @@
             const chatInput = document.getElementById('chatInput');
             const question = chatInput.value.trim();
             const encodedGuide = chatInput.dataset.guide;
-            const guideText = atob(encodedGuide);
+            const guideText = decodeURIComponent(encodedGuide);
 
             if (!question) {
                 showAlert('Please enter a question', 'error');
