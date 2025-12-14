@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌍 AI Travel Planner</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .form-section {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .form-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            min-width: 150px;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 30px;
+            min-height: 500px;
+        }
+
+        @media (max-width: 900px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        #map {
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            height: 500px;
+        }
+
+        .intel-section {
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .intel-section::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .intel-section::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .intel-section::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+
+        .intel-section::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
+        }
+
+        .intel-content {
+            color: #333;
+            line-height: 1.8;
+        }
+
+        .intel-content h2 {
+            color: #667eea;
+            margin: 20px 0 10px 0;
+            font-size: 1.3em;
+        }
+
+        .intel-content h3 {
+            color: #764ba2;
+            margin: 15px 0 8px 0;
+            font-size: 1.1em;
+        }
+
+        .intel-content ul, .intel-content ol {
+            margin: 10px 0 10px 20px;
+        }
+
+        .intel-content li {
+            margin: 5px 0;
+        }
+
+        .intel-content strong {
+            color: #667eea;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border: 1px solid #f5c6cb;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border: 1px solid #c3e6cb;
+        }
+
+        .location-list {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .location-list h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .location-item {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .location-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .location-item .name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .location-item .coords {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .initial-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .initial-state svg {
+            width: 100px;
+            height: 100px;
+            opacity: 0.5;
+            margin-bottom: 20px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button.secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        button.secondary:hover {
+            background: #f8f9fa;
+        }
+
+        .chat-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e9ecef;
+        }
+
+        .chat-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .chat-group input {
+            flex: 1;
+        }
+
+        .chat-group button {
+            padding: 12px 20px;
+        }
+
+        .chat-response {
+            background: #f0f7ff;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 15px;
+            border-left: 4px solid #667eea;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌍 AI Travel Planner</h1>
+            <p>Get instant travel intelligence with destination guides and interactive maps</p>
+        </header>
+
+        <div class="main">
+            <div class="form-section">
+                <div class="form-group">
+                    <input 
+                        type="text" 
+                        id="destination" 
+                        placeholder="Enter destination (e.g., Paris, Tokyo, Barcelona)" 
+                        autocomplete="off"
+                    >
+                    <input 
+                        type="text" 
+                        id="month" 
+                        placeholder="Month (e.g., March, July)" 
+                        autocomplete="off"
+                    >
+                    <button id="generateBtn">Generate Guide</button>
+                </div>
+            </div>
+
+            <div id="alertContainer"></div>
+
+            <div id="contentArea" class="content">
+                <div class="initial-state">
+                    <svg viewBox="0 0 100 100" fill="none" stroke="currentColor">
+                        <circle cx="50" cy="50" r="45" stroke-width="2"/>
+                        <path d="M50 20v30M50 60v20M30 50h20M70 50h-20" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <h3>Ready to explore?</h3>
+                    <p>Enter a destination and month to get started</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration - automatically detects the right URL for GitHub Codespaces
+        let API_URL;
+        if (window.location.hostname.includes('app.github.dev')) {
+            // GitHub Codespaces - replace port 3000 with 8000
+            API_URL = window.location.origin.replace('-3000.', '-8000.');
+        } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            API_URL = 'http://localhost:8000';
+        } else {
+            API_URL = window.location.protocol + '//' + window.location.hostname + ':8000';
+        }
+
+        // DOM Elements
+        const destInput = document.getElementById('destination');
+        const monthInput = document.getElementById('month');
+        const generateBtn = document.getElementById('generateBtn');
+        const contentArea = document.getElementById('contentArea');
+        const alertContainer = document.getElementById('alertContainer');
+
+        // Event Listeners
+        generateBtn.addEventListener('click', handleGenerate);
+        destInput.addEventListener('keypress', (e) => e.key === 'Enter' && handleGenerate());
+        monthInput.addEventListener('keypress', (e) => e.key === 'Enter' && handleGenerate());
+
+        async function handleGenerate() {
+            const destination = destInput.value.trim();
+            const month = monthInput.value.trim();
+
+            if (!destination || !month) {
+                showAlert('Please enter both destination and month', 'error');
+                return;
+            }
+
+            generateBtn.disabled = true;
+            showLoading();
+            clearAlerts();
+
+            try {
+                const response = await fetch(`${API_URL}/api/generate-intel`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        destination: destination,
+                        month: month
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to generate guide');
+                }
+
+                const data = await response.json();
+                displayResults(data);
+                showAlert(`✅ Guide generated for ${destination}!`, 'success');
+
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert(`Error: ${error.message}`, 'error');
+            } finally {
+                generateBtn.disabled = false;
+            }
+        }
+
+        function showLoading() {
+            contentArea.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Generating your travel guide...</p>
+                </div>
+            `;
+        }
+
+        function displayResults(data) {
+            const mapHtml = `<div id="map"></div>`;
+            const intelHtml = `
+                <div>
+                    <div class="intel-section">
+                        <h2>${data.destination} - ${data.month}</h2>
+                        <div class="intel-content">
+                            ${markdownToHtml(data.intel)}
+                        </div>
+                        ${data.locations.length > 0 ? `
+                            <div class="location-list">
+                                <h3>📍 Locations (${data.locations.length})</h3>
+                                ${data.locations.map((loc, i) => `
+                                    <div class="location-item" onclick="focusLocation(${loc.lat}, ${loc.lon})">
+                                        <div class="name">${loc.name}</div>
+                                        <div class="coords">${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        <div class="chat-section">
+                            <h3>Ask a Question</h3>
+                            <div class="chat-group">
+                                <input 
+                                    type="text" 
+                                    id="chatInput" 
+                                    placeholder="Ask about the guide..."
+                                    data-guide="${btoa(data.intel)}"
+                                >
+                                <button onclick="sendChat(this)">Ask</button>
+                            </div>
+                            <div id="chatResponse"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            contentArea.innerHTML = mapHtml + intelHtml;
+
+            // Initialize map after DOM update
+            setTimeout(() => {
+                if (data.locations.length > 0) {
+                    initializeMap(data.locations);
+                } else {
+                    document.getElementById('map').innerHTML = '<p style="padding: 20px; text-align: center; color: #999;">No locations found in the guide</p>';
+                }
+            }, 0);
+        }
+
+        function initializeMap(locations) {
+            const mapElement = document.getElementById('map');
+            if (!mapElement) return;
+
+            const center = [locations[0].lat, locations[0].lon];
+            const map = L.map('map').setView(center, 12);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+
+            locations.forEach(loc => {
+                const marker = L.marker([loc.lat, loc.lon])
+                    .bindPopup(`<b>${loc.name}</b><br>${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)}`)
+                    .addTo(map);
+            });
+
+            // Auto zoom to fit all markers
+            if (locations.length > 1) {
+                const group = new L.featureGroup(
+                    locations.map(loc => L.marker([loc.lat, loc.lon]))
+                );
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+
+        function focusLocation(lat, lon) {
+            const mapElement = document.getElementById('map');
+            if (mapElement && mapElement._leaflet_map) {
+                mapElement._leaflet_map.setView([lat, lon], 15);
+            }
+        }
+
+        async function sendChat(button) {
+            const chatInput = document.getElementById('chatInput');
+            const question = chatInput.value.trim();
+            const encodedGuide = chatInput.dataset.guide;
+            const guideText = atob(encodedGuide);
+
+            if (!question) {
+                showAlert('Please enter a question', 'error');
+                return;
+            }
+
+            button.disabled = true;
+            const responseDiv = document.getElementById('chatResponse');
+            responseDiv.innerHTML = '<div class="loading" style="padding: 20px;"><div class="spinner" style="margin: 0 auto 10px;"></div>Thinking...</div>';
+
+            try {
+                const response = await fetch(`${API_URL}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        guide_text: guideText,
+                        user_query: question
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to get response');
+                }
+
+                const data = await response.json();
+                responseDiv.innerHTML = `<div class="chat-response">${data.response}</div>`;
+                chatInput.value = '';
+
+            } catch (error) {
+                responseDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            } finally {
+                button.disabled = false;
+            }
+        }
+
+        function markdownToHtml(markdown) {
+            let html = markdown
+                // Headers
+                .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
+                .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
+                .replace(/^# (.*?)$/gm, '<h1>$1</h1>')
+                // Bold
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/__(.*?)__/g, '<strong>$1</strong>')
+                // Italic
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/_(.*?)_/g, '<em>$1</em>')
+                // Line breaks
+                .replace(/\n\n/g, '</p><p>')
+                .replace(/\n/g, '<br>')
+                // Lists
+                .replace(/^\* (.*?)$/gm, '<li>$1</li>')
+                .replace(/^\- (.*?)$/gm, '<li>$1</li>')
+                .replace(/(<li>.*?<\/li>)/s, '<ul>$1</ul>')
+                // Remove coordinate blocks
+                .replace(/\(---PAGE BREAK---\)[\s\S]*?(?=<h|$)/g, '')
+                .replace(/COORDINATES[\s\S]*?(?=<h|$)/gi, '');
+
+            return `<p>${html}</p>`.replace(/<p><\/p>/g, '');
+        }
+
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = type;
+            alertDiv.textContent = message;
+            alertDiv.style.cssText = 'margin: 15px 30px 0;';
+            alertContainer.appendChild(alertDiv);
+
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+
+        function clearAlerts() {
+            alertContainer.innerHTML = '';
+        }
+
+        // Check API availability on load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                if (!response.ok) {
+                    console.warn('API may not be available');
+                }
+            } catch (error) {
+                console.warn('API not reachable:', error);
+                showAlert('⚠️ Warning: API server may not be running. Make sure to start the backend with: python -m uvicorn api:app --host 0.0.0.0 --port 8000', 'error');
+            }
+        });
+    </script>
+</body>
+</html>
