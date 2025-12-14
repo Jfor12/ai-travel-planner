@@ -296,7 +296,17 @@ async def get_itinerary(trip_id: int):
             raise HTTPException(status_code=404, detail="Itinerary not found")
         
         # Extract locations from the guide text
-        locations = extract_map_data(details[1])
+        locations_df = extract_map_data(details[1])
+        
+        # Convert DataFrame to array of objects
+        locations = []
+        if isinstance(locations_df, dict) and 'name' in locations_df:
+            for i in range(len(locations_df['name'])):
+                locations.append({
+                    "name": locations_df['name'][str(i)],
+                    "lat": locations_df['lat'][str(i)],
+                    "lon": locations_df['lon'][str(i)]
+                })
         
         return {
             "destination": details[0],
