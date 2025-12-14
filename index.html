@@ -744,14 +744,14 @@
 
                 const data = await response.json();
                 
-                // Use the same layout structure as displayResults
-                contentArea.innerHTML = `
-                    <div id="map"></div>
+                // Replicate exactly what displayResults does
+                const mapHtml = `<div id="map"></div>`;
+                const intelHtml = `
                     <div>
                         <div class="intel-section">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <div style="margin-bottom: 20px;">
+                                <button onclick="showMyTrips()" style="margin-bottom: 10px;">← Back to My Trips</button>
                                 <h2>${data.destination}</h2>
-                                <button onclick="showMyTrips()">← Back to My Trips</button>
                             </div>
                             <div class="intel-content">
                                 ${markdownToHtml(data.guide_text)}
@@ -767,16 +767,34 @@
                                     `).join('')}
                                 </div>
                             ` : ''}
+                            <div class="button-group">
+                                <button onclick="exportPDF('${data.destination}', '', \`${data.guide_text.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">📄 Export PDF</button>
+                            </div>
+                            <div class="chat-section">
+                                <h3>Ask a Question</h3>
+                                <div class="chat-group">
+                                    <input 
+                                        type="text" 
+                                        id="chatInput" 
+                                        placeholder="Ask about the guide..."
+                                        data-guide="${encodeURIComponent(data.guide_text)}"
+                                    >
+                                    <button onclick="sendChat(this)">Ask</button>
+                                </div>
+                                <div id="chatResponse"></div>
+                            </div>
                         </div>
                     </div>
                 `;
+
+                contentArea.innerHTML = mapHtml + intelHtml;
 
                 // Initialize map after DOM update
                 setTimeout(() => {
                     if (data.locations && data.locations.length > 0) {
                         initializeMap(data.locations);
                     } else {
-                        document.getElementById('map').innerHTML = '<p style="padding: 20px; text-align: center; color: #999;">No locations found in this guide</p>';
+                        document.getElementById('map').innerHTML = '<p style="padding: 20px; text-align: center; color: #999;">No locations found in the guide</p>';
                     }
                 }, 0);
 
