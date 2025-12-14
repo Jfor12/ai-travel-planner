@@ -11,3 +11,6 @@ thefuzz
 tavily-python
 pandas fpdf
 pydeck
+fastapi
+uvicorn[standard]
+pydantic
