@@ -90,35 +90,6 @@ docker run -p 8000:8000 \
   ai-travel-planner
 ```
 
-## ☁️ Cloud Deployment
-
-### Google Cloud Run (Recommended)
-
-Deploy using GitHub Actions (auto-deploys on push):
-
-```bash
-# See DEPLOYMENT.md for full setup guide
-gcloud run deploy ai-travel-planner \
-  --source . \
-  --region us-central1 \
-  --allow-unauthenticated
-```
-
-**Benefits:**
-- 2M free requests/month
-- Auto-scaling (0 to 1000 instances)
-- Global CDN
-- Pay only for what you use
-
-See [DEPLOYMENT.md](DEPLOYMENT.md) for complete setup instructions.
-
-### Railway (Alternative)
-
-Simple one-click deployment:
-1. Connect GitHub repository
-2. Add environment variables
-3. Auto-deploys on push
-
 ## 📂 Project Structure
 
 ```
