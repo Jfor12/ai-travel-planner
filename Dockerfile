@@ -22,7 +22,9 @@ RUN useradd -m appuser && chown -R appuser:appuser /app
 USER appuser
 
 ENV PYTHONUNBUFFERED=1
+ENV PORT=8000
 
 EXPOSE 8000
 
-CMD ["python", "-m", "uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Cloud Run sets PORT env variable, use it or default to 8000
+CMD python -m uvicorn api:app --host 0.0.0.0 --port ${PORT}
