@@ -7,36 +7,6 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <style>
-        :root {
-            --bg-primary: #0a0e27;
-            --bg-secondary: #141937;
-            --bg-card: #1e2442;
-            --text-primary: #e8eaf0;
-            --text-secondary: #9ca3af;
-            --accent-primary: #667eea;
-            --accent-secondary: #764ba2;
-            --accent-tertiary: #f093fb;
-            --success: #10b981;
-            --error: #ef4444;
-            --border: rgba(255, 255, 255, 0.1);
-            --shadow: rgba(0, 0, 0, 0.5);
-        }
-
-        [data-theme="light"] {
-            --bg-primary: #f8fafc;
-            --bg-secondary: #ffffff;
-            --bg-card: #ffffff;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --accent-primary: #6366f1;
-            --accent-secondary: #8b5cf6;
-            --accent-tertiary: #ec4899;
-            --success: #10b981;
-            --error: #ef4444;
-            --border: rgba(0, 0, 0, 0.1);
-            --shadow: rgba(0, 0, 0, 0.1);
-        }
-
         * {
             margin: 0;
             padding: 0;
@@ -44,356 +14,209 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-size: 200% 200%;
+            animation: gradientShift 15s ease infinite;
             min-height: 100vh;
             padding: 20px;
             display: flex;
             flex-direction: column;
-            transition: background 0.3s ease, color 0.3s ease;
-            position: relative;
-            overflow-x: hidden;
         }
 
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: 
-                radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.15) 0%, transparent 50%),
-                radial-gradient(circle at 40% 40%, rgba(240, 147, 251, 0.1) 0%, transparent 40%);
-            pointer-events: none;
-            z-index: -1;
-            animation: pulse 15s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.8; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.1); }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-            width: 100%;
         }
 
         header {
             text-align: center;
-            margin-bottom: 40px;
-            position: relative;
-        }
-
-        .header-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 20px;
+            color: white;
             margin-bottom: 30px;
-        }
-
-        .logo-section {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .logo {
-            font-size: 3.5em;
-            animation: float 3s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
 
         header h1 {
-            font-size: 2.5em;
+            font-size: 3em;
+            margin-bottom: 10px;
             font-weight: 800;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary), var(--accent-tertiary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
             letter-spacing: -1px;
         }
 
         header p {
             font-size: 1.2em;
-            color: var(--text-secondary);
-            margin-top: 10px;
-        }
-
-        .theme-toggle {
-            background: var(--bg-card);
-            border: 2px solid var(--border);
-            border-radius: 50px;
-            padding: 8px 16px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s;
-            box-shadow: 0 4px 15px var(--shadow);
-        }
-
-        .theme-toggle:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px var(--shadow);
-        }
-
-        .theme-icon {
-            font-size: 1.4em;
-        }
-
-        .warning-banner {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(245, 158, 11, 0.1));
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 16px;
-            padding: 16px 24px;
-            margin: 20px 0;
-            backdrop-filter: blur(10px);
-            font-size: 0.95em;
-        }
-
-        .warning-banner strong {
-            color: var(--accent-primary);
+            opacity: 0.95;
+            font-weight: 300;
         }
 
         .main {
-            background: var(--bg-card);
-            border-radius: 24px;
+            background: white;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: 
-                0 20px 60px var(--shadow),
-                0 0 0 1px var(--border);
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
             margin-bottom: 30px;
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
         }
 
         .form-section {
             padding: 30px;
-            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));
-            border-bottom: 1px solid var(--border);
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
         }
 
         .form-group {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             flex-wrap: wrap;
-            align-items: stretch;
-        }
-
-        .input-wrapper {
-            flex: 1;
-            min-width: 200px;
-            position: relative;
+            align-items: flex-end;
         }
 
         input[type="text"], select {
-            width: 100%;
-            padding: 14px 18px;
-            border: 2px solid var(--border);
-            border-radius: 12px;
+            flex: 1;
+            min-width: 150px;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
             font-size: 1em;
             transition: all 0.3s;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            background: white;
         }
 
         input[type="text"]:focus, select:focus {
             outline: none;
-            border-color: var(--accent-primary);
-            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-            transform: translateY(-1px);
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
         select {
             cursor: pointer;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 15px center;
-            padding-right: 45px;
         }
 
         button {
-            padding: 14px 28px;
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 12px;
+            border-radius: 6px;
             font-size: 1em;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
             white-space: nowrap;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-            position: relative;
-            overflow: hidden;
-        }
-
-        button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s;
-        }
-
-        button:hover::before {
-            left: 100%;
         }
 
         button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+            filter: brightness(1.1);
         }
 
         button:active {
             transform: translateY(0);
         }
 
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
         button:disabled {
-            opacity: 0.5;
+            opacity: 0.6;
             cursor: not-allowed;
             transform: none;
-        }
-
-        button.secondary {
-            background: var(--bg-secondary);
-            color: var(--accent-primary);
-            border: 2px solid var(--accent-primary);
-            box-shadow: none;
-        }
-
-        button.secondary:hover {
-            background: var(--accent-primary);
-            color: white;
         }
 
         .content {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 25px;
+            gap: 20px;
             padding: 30px;
-            min-height: 600px;
+            min-height: 500px;
         }
 
-        @media (max-width: 968px) {
+        @media (max-width: 900px) {
             .content {
                 grid-template-columns: 1fr;
-            }
-
-            .form-group {
-                flex-direction: column;
-            }
-
-            .input-wrapper {
-                min-width: 100%;
-            }
-
-            header h1 {
-                font-size: 2em;
-            }
-
-            .header-content {
-                justify-content: center;
-            }
-
-            .logo-section {
-                flex-direction: column;
-                text-align: center;
             }
         }
 
         #map {
-            border-radius: 16px;
-            border: 1px solid var(--border);
-            height: 600px;
-            box-shadow: 0 8px 30px var(--shadow);
+            border-radius: 12px;
+            border: none;
+            height: 500px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
             overflow: hidden;
         }
 
         .intel-section {
             overflow-y: auto;
             padding-right: 10px;
-            max-height: 600px;
         }
 
         .intel-section::-webkit-scrollbar {
-            width: 10px;
+            width: 8px;
         }
 
         .intel-section::-webkit-scrollbar-track {
-            background: var(--bg-secondary);
+            background: #f1f1f1;
             border-radius: 10px;
         }
 
         .intel-section::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            background: #667eea;
             border-radius: 10px;
         }
 
         .intel-section::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, var(--accent-secondary), var(--accent-tertiary));
+            background: #764ba2;
         }
 
         .intel-content {
-            color: var(--text-primary);
-            line-height: 1.9;
+            color: #333;
+            line-height: 1.8;
         }
 
         .intel-content h2 {
-            color: var(--accent-primary);
-            margin: 25px 0 15px 0;
-            font-size: 1.6em;
-            font-weight: 700;
+            color: #667eea;
+            margin: 20px 0 10px 0;
+            font-size: 1.3em;
         }
 
         .intel-content h3 {
-            color: var(--accent-secondary);
-            margin: 20px 0 10px 0;
-            font-size: 1.3em;
-            font-weight: 600;
+            color: #764ba2;
+            margin: 15px 0 8px 0;
+            font-size: 1.1em;
         }
 
         .intel-content ul, .intel-content ol {
-            margin: 15px 0 15px 25px;
+            margin: 10px 0 10px 20px;
         }
 
         .intel-content li {
-            margin: 8px 0;
-            padding-left: 5px;
+            margin: 5px 0;
         }
 
         .intel-content strong {
-            color: var(--accent-primary);
-            font-weight: 600;
+            color: #667eea;
         }
 
         .loading {
             text-align: center;
-            padding: 80px 20px;
+            padding: 60px 20px;
         }
 
         .spinner {
-            border: 4px solid var(--border);
-            border-top: 4px solid var(--accent-primary);
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
             margin: 0 auto 20px;
         }
@@ -404,107 +227,101 @@
         }
 
         .error {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
-            color: var(--error);
-            padding: 16px 20px;
-            border-radius: 12px;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
             margin-bottom: 15px;
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            backdrop-filter: blur(10px);
+            border: 1px solid #f5c6cb;
         }
 
         .success {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
-            color: var(--success);
-            padding: 16px 20px;
-            border-radius: 12px;
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 6px;
             margin-bottom: 15px;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            backdrop-filter: blur(10px);
+            border: 1px solid #c3e6cb;
         }
 
         .location-list {
-            background: var(--bg-secondary);
-            border-radius: 16px;
-            padding: 20px;
-            margin-top: 25px;
-            border: 1px solid var(--border);
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
         }
 
         .location-list h3 {
-            color: var(--accent-primary);
+            color: #667eea;
             margin-bottom: 15px;
-            font-size: 1.2em;
         }
 
         .location-item {
-            background: var(--bg-card);
-            padding: 15px 18px;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            border-left: 4px solid var(--accent-primary);
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
             cursor: pointer;
             transition: all 0.3s;
-            box-shadow: 0 2px 8px var(--shadow);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
         .location-item:hover {
-            transform: translateX(8px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
-            border-left-color: var(--accent-tertiary);
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+            border-left-color: #764ba2;
         }
 
         .location-item .name {
             font-weight: 600;
-            color: var(--text-primary);
-            font-size: 1.05em;
+            color: #333;
         }
 
         .location-item .coords {
             font-size: 0.9em;
-            color: var(--text-secondary);
-            margin-top: 6px;
+            color: #666;
+            margin-top: 5px;
         }
 
         .initial-state {
             text-align: center;
-            padding: 80px 20px;
-            color: var(--text-secondary);
+            padding: 60px 20px;
+            color: #999;
         }
 
-        .initial-state .icon {
-            font-size: 80px;
+        .initial-state svg {
+            width: 100px;
+            height: 100px;
+            opacity: 0.5;
             margin-bottom: 20px;
-            opacity: 0.6;
-        }
-
-        .initial-state h3 {
-            font-size: 1.6em;
-            color: var(--text-primary);
-            margin-bottom: 10px;
         }
 
         .button-group {
             display: flex;
-            gap: 12px;
-            margin-top: 25px;
-            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button.secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        button.secondary:hover {
+            background: #f8f9fa;
         }
 
         .chat-section {
-            margin-top: 30px;
-            padding-top: 25px;
-            border-top: 1px solid var(--border);
-        }
-
-        .chat-section h3 {
-            color: var(--text-primary);
-            margin-bottom: 15px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e9ecef;
         }
 
         .chat-group {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             margin-top: 15px;
         }
 
@@ -513,102 +330,25 @@
         }
 
         .chat-group button {
-            padding: 14px 24px;
+            padding: 12px 20px;
         }
 
         .chat-response {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-            padding: 18px;
-            border-radius: 12px;
+            background: #f0f7ff;
+            padding: 15px;
+            border-radius: 6px;
             margin-top: 15px;
-            border-left: 4px solid var(--accent-primary);
-            line-height: 1.7;
-            color: var(--text-primary);
-        }
-
-        footer {
-            text-align: center;
-            color: var(--text-secondary);
-            padding: 30px 20px;
-            margin-top: auto;
-        }
-
-        footer p {
-            margin-bottom: 15px;
-        }
-
-        .social-links {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            align-items: center;
-            flex-wrap: wrap;
-        }
-
-        .social-link {
-            color: var(--text-primary);
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 20px;
-            background: var(--bg-card);
-            border-radius: 12px;
-            transition: all 0.3s;
-            border: 1px solid var(--border);
-        }
-
-        .social-link:hover {
-            background: var(--accent-primary);
-            color: white;
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        @media (max-width: 480px) {
-            body {
-                padding: 15px;
-            }
-
-            .form-section {
-                padding: 20px;
-            }
-
-            .content {
-                padding: 20px;
-            }
-
-            .button-group {
-                flex-direction: column;
-            }
-
-            button {
-                width: 100%;
-            }
-
-            #map {
-                height: 400px;
-            }
+            border-left: 4px solid #667eea;
+            line-height: 1.6;
         }
     </style>
 </head>
-<body data-theme="dark">
+<body>
     <div class="container">
         <header>
-            <div class="header-content">
-                <div class="logo-section">
-                    <div class="logo">🌍</div>
-                    <div>
-                        <h1>AI Travel Planner</h1>
-                        <p>Get instant travel intelligence with AI-powered guides</p>
-                    </div>
-                </div>
-                <button class="theme-toggle" onclick="toggleTheme()">
-                    <span class="theme-icon">🌙</span>
-                    <span id="themeText">Dark Mode</span>
-                </button>
-            </div>
-            <div class="warning-banner">
+            <h1>🌍 AI Travel Planner</h1>
+            <p>Get instant travel intelligence with destination guides and interactive maps</p>
+            <div style="margin-top: 15px; background: rgba(255, 255, 255, 0.1); padding: 12px 20px; border-radius: 8px; font-size: 0.9em; backdrop-filter: blur(10px);">
                 ⚠️ <strong>Portfolio Project:</strong> Public demo with shared database. Rate limited to 5 generations/hour. Saved trips are visible to all users.
             </div>
         </header>
@@ -616,39 +356,35 @@
         <div class="main">
             <div class="form-section">
                 <div class="form-group">
-                    <div class="input-wrapper">
-                        <select id="destination">
-                            <option value="">Select destination...</option>
-                            <option value="Paris">Paris, France</option>
-                            <option value="Tokyo">Tokyo, Japan</option>
-                            <option value="New York">New York, USA</option>
-                            <option value="London">London, UK</option>
-                            <option value="Dubai">Dubai, UAE</option>
-                            <option value="Barcelona">Barcelona, Spain</option>
-                            <option value="Rome">Rome, Italy</option>
-                            <option value="Bangkok">Bangkok, Thailand</option>
-                            <option value="Singapore">Singapore</option>
-                            <option value="Istanbul">Istanbul, Turkey</option>
-                        </select>
-                    </div>
-                    <div class="input-wrapper">
-                        <select id="month">
-                            <option value="">Select month...</option>
-                            <option value="January">January</option>
-                            <option value="February">February</option>
-                            <option value="March">March</option>
-                            <option value="April">April</option>
-                            <option value="May">May</option>
-                            <option value="June">June</option>
-                            <option value="July">July</option>
-                            <option value="August">August</option>
-                            <option value="September">September</option>
-                            <option value="October">October</option>
-                            <option value="November">November</option>
-                            <option value="December">December</option>
-                        </select>
-                    </div>
-                    <button id="generateBtn">✨ Generate Guide</button>
+                    <select id="destination">
+                        <option value="">Select destination...</option>
+                        <option value="Paris">Paris, France</option>
+                        <option value="Tokyo">Tokyo, Japan</option>
+                        <option value="New York">New York, USA</option>
+                        <option value="London">London, UK</option>
+                        <option value="Dubai">Dubai, UAE</option>
+                        <option value="Barcelona">Barcelona, Spain</option>
+                        <option value="Rome">Rome, Italy</option>
+                        <option value="Bangkok">Bangkok, Thailand</option>
+                        <option value="Singapore">Singapore</option>
+                        <option value="Istanbul">Istanbul, Turkey</option>
+                    </select>
+                    <select id="month">
+                        <option value="">Select month...</option>
+                        <option value="January">January</option>
+                        <option value="February">February</option>
+                        <option value="March">March</option>
+                        <option value="April">April</option>
+                        <option value="May">May</option>
+                        <option value="June">June</option>
+                        <option value="July">July</option>
+                        <option value="August">August</option>
+                        <option value="September">September</option>
+                        <option value="October">October</option>
+                        <option value="November">November</option>
+                        <option value="December">December</option>
+                    </select>
+                    <button id="generateBtn">Generate Guide</button>
                     <button class="secondary" id="myTripsBtn">📚 My Trips</button>
                 </div>
             </div>
@@ -656,76 +392,63 @@
             <div id="alertContainer"></div>
 
             <div id="contentArea" class="content">
-                <div class="initial-state" style="grid-column: 1 / -1;">
-                    <div class="icon">🗺️</div>
+                <div class="initial-state">
+                    <svg viewBox="0 0 100 100" fill="none" stroke="currentColor">
+                        <circle cx="50" cy="50" r="45" stroke-width="2"/>
+                        <path d="M50 20v30M50 60v20M30 50h20M70 50h-20" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
                     <h3>Ready to explore?</h3>
-                    <p>Select a destination and month to generate your personalized AI travel guide</p>
+                    <p>Enter a destination and month to get started</p>
                 </div>
             </div>
         </div>
 
-        <footer>
-            <p style="font-size: 1.1em; font-weight: 600; margin-bottom: 15px;">Created by Jacopo Fornesi</p>
-            <div class="social-links">
-                <a href="https://github.com/Jfor12" target="_blank" rel="noopener noreferrer" class="social-link">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                    </svg>
-                    GitHub
-                </a>
-                <a href="https://linkedin.com/in/jacopo-fornesi" target="_blank" rel="noopener noreferrer" class="social-link">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
-                    </svg>
-                    LinkedIn
-                </a>
+        <footer style="
+            text-align: center;
+            color: white;
+            padding: 20px;
+            margin-top: auto;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        ">
+            <div style="margin-bottom: 15px;">
+                <p style="font-size: 1.1em; font-weight: 500; margin-bottom: 10px;">Created by Jacopo Fornesi</p>
+                <div style="display: flex; gap: 20px; justify-content: center; align-items: center;">
+                    <a href="https://github.com/jacopofornesi" target="_blank" rel="noopener noreferrer" 
+                       style="color: white; text-decoration: none; display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; transition: all 0.3s;"
+                       onmouseover="this.style.background='rgba(255, 255, 255, 0.2)'; this.style.transform='translateY(-2px)'"
+                       onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'; this.style.transform='translateY(0)'">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                        </svg>
+                        GitHub
+                    </a>
+                    <a href="https://linkedin.com/in/jfor12" target="_blank" rel="noopener noreferrer" 
+                       style="color: white; text-decoration: none; display: flex; align-items: center; gap: 8px; padding: 8px 16px; background: rgba(255, 255, 255, 0.1); border-radius: 8px; transition: all 0.3s;"
+                       onmouseover="this.style.background='rgba(255, 255, 255, 0.2)'; this.style.transform='translateY(-2px)'"
+                       onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'; this.style.transform='translateY(0)'">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                        </svg>
+                        LinkedIn
+                    </a>
+                </div>
             </div>
-            <p style="margin-top: 20px; opacity: 0.7;">© 2025 AI Travel Planner · Powered by AI</p>
+            <p style="font-size: 0.9em; opacity: 0.8; margin-top: 10px;">
+                © 2025 AI Travel Planner · Powered by AI
+            </p>
         </footer>
     </div>
 
     <script>
-        // Theme Management
-        function toggleTheme() {
-            const body = document.body;
-            const themeIcon = document.querySelector('.theme-icon');
-            const themeText = document.getElementById('themeText');
-            const currentTheme = body.getAttribute('data-theme');
-            
-            if (currentTheme === 'dark') {
-                body.setAttribute('data-theme', 'light');
-                themeIcon.textContent = '☀️';
-                themeText.textContent = 'Light Mode';
-                localStorage.setItem('theme', 'light');
-            } else {
-                body.setAttribute('data-theme', 'dark');
-                themeIcon.textContent = '🌙';
-                themeText.textContent = 'Dark Mode';
-                localStorage.setItem('theme', 'dark');
-            }
-        }
-
-        // Load saved theme
-        window.addEventListener('DOMContentLoaded', () => {
-            const savedTheme = localStorage.getItem('theme') || 'dark';
-            const body = document.body;
-            const themeIcon = document.querySelector('.theme-icon');
-            const themeText = document.getElementById('themeText');
-            
-            body.setAttribute('data-theme', savedTheme);
-            if (savedTheme === 'light') {
-                themeIcon.textContent = '☀️';
-                themeText.textContent = 'Light Mode';
-            }
-        });
-
-        // Configuration
+        // Configuration - automatically detects the right URL for GitHub Codespaces
         let API_URL;
         if (window.location.hostname.includes('app.github.dev')) {
+            // GitHub Codespaces - replace port 3000 with 8000
             API_URL = window.location.origin.replace('-3000.', '-8000.');
         } else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             API_URL = 'http://localhost:8000';
         } else {
+            // Production - Google Cloud Run backend
             API_URL = 'https://ai-travel-planner-815578147202.europe-west1.run.app';
         }
 
@@ -740,6 +463,12 @@
         // Event Listeners
         generateBtn.addEventListener('click', handleGenerate);
         myTripsBtn.addEventListener('click', showMyTrips);
+        destInput.addEventListener('change', () => {
+            if (destInput.value && monthInput.value) generateBtn.style.animation = 'pulse 0.5s';
+        });
+        monthInput.addEventListener('change', () => {
+            if (destInput.value && monthInput.value) generateBtn.style.animation = 'pulse 0.5s';
+        });
 
         async function handleGenerate() {
             const destination = destInput.value.trim();
@@ -791,9 +520,9 @@
 
         function showLoading() {
             contentArea.innerHTML = `
-                <div class="loading" style="grid-column: 1 / -1;">
+                <div class="loading">
                     <div class="spinner"></div>
-                    <p>Generating your AI-powered travel guide...</p>
+                    <p>Generating your travel guide...</p>
                 </div>
             `;
         }
@@ -823,7 +552,7 @@
                             <button onclick="exportPDF('${data.destination}', '${data.month}', \`${data.intel.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">📄 Export PDF</button>
                         </div>
                         <div class="chat-section">
-                            <h3>💬 Ask a Question</h3>
+                            <h3>Ask a Question</h3>
                             <div class="chat-group">
                                 <input 
                                     type="text" 
@@ -841,11 +570,12 @@
 
             contentArea.innerHTML = mapHtml + intelHtml;
 
+            // Initialize map after DOM update
             setTimeout(() => {
                 if (data.locations.length > 0) {
                     initializeMap(data.locations);
                 } else {
-                    document.getElementById('map').innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">No locations found in the guide</p>';
+                    document.getElementById('map').innerHTML = '<p style="padding: 20px; text-align: center; color: #999;">No locations found in the guide</p>';
                 }
             }, 0);
         }
@@ -868,6 +598,7 @@
                     .addTo(map);
             });
 
+            // Auto zoom to fit all markers
             if (locations.length > 1) {
                 const group = new L.featureGroup(
                     locations.map(loc => L.marker([loc.lat, loc.lon]))
@@ -987,18 +718,24 @@
 
         function markdownToHtml(markdown) {
             let html = markdown
+                // Headers
                 .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
                 .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
                 .replace(/^# (.*?)$/gm, '<h1>$1</h1>')
+                // Bold
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                 .replace(/__(.*?)__/g, '<strong>$1</strong>')
+                // Italic
                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
                 .replace(/_(.*?)_/g, '<em>$1</em>')
+                // Line breaks
                 .replace(/\n\n/g, '</p><p>')
                 .replace(/\n/g, '<br>')
+                // Lists
                 .replace(/^\* (.*?)$/gm, '<li>$1</li>')
                 .replace(/^\- (.*?)$/gm, '<li>$1</li>')
                 .replace(/(<li>.*?<\/li>)/s, '<ul>$1</ul>')
+                // Remove coordinate blocks and page breaks
                 .replace(/\(---PAGE BREAK---\)[^\n]*/gi, '')
                 .replace(/---PAGE BREAK---[^\n]*/gi, '')
                 .replace(/\(---page break---\)[^\n]*/gi, '')
@@ -1024,7 +761,7 @@
 
         async function showMyTrips() {
             clearAlerts();
-            contentArea.innerHTML = '<div class="loading" style="grid-column: 1 / -1;"><div class="spinner"></div><p>Loading your trips...</p></div>';
+            contentArea.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading your trips...</p></div>';
 
             try {
                 const response = await fetch(`${API_URL}/api/itineraries`);
@@ -1034,8 +771,7 @@
                 
                 if (data.trips.length === 0) {
                     contentArea.innerHTML = `
-                        <div class="initial-state" style="grid-column: 1 / -1;">
-                            <div class="icon">📚</div>
+                        <div class="initial-state">
                             <h3>No saved trips yet</h3>
                             <p>Generate a guide and save it to see it here</p>
                         </div>
@@ -1048,14 +784,14 @@
                         <h2>📚 My Saved Trips</h2>
                         <div style="display: grid; gap: 15px; margin-top: 20px;">
                             ${data.trips.map(trip => `
-                                <div class="location-item" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                                    <div onclick="viewTrip(${trip.id})" style="flex: 1; cursor: pointer; min-width: 200px;">
+                                <div class="location-item" style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div onclick="viewTrip(${trip.id})" style="flex: 1; cursor: pointer;">
                                         <div class="name">${trip.destination}</div>
                                         <div class="coords">${new Date(trip.created_at).toLocaleDateString()}</div>
                                     </div>
                                     <div class="button-group" style="margin: 0;">
-                                        <button onclick="event.stopPropagation(); viewTrip(${trip.id})" style="padding: 10px 20px;">👁️ View</button>
-                                        <button onclick="event.stopPropagation(); deleteTrip(${trip.id})" style="padding: 10px 20px; background: linear-gradient(135deg, #ef4444, #dc2626);">🗑️ Delete</button>
+                                        <button onclick="event.stopPropagation(); viewTrip(${trip.id})" style="padding: 8px 15px;">View</button>
+                                        <button onclick="event.stopPropagation(); deleteTrip(${trip.id})" style="padding: 8px 15px; background: #dc3545;">Delete</button>
                                     </div>
                                 </div>
                             `).join('')}
@@ -1072,7 +808,7 @@
 
         async function viewTrip(tripId) {
             clearAlerts();
-            contentArea.innerHTML = '<div class="loading" style="grid-column: 1 / -1;"><div class="spinner"></div><p>Loading trip details...</p></div>';
+            contentArea.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading trip details...</p></div>';
 
             try {
                 const response = await fetch(`${API_URL}/api/itinerary/${tripId}`);
@@ -1080,6 +816,7 @@
 
                 const data = await response.json();
                 
+                // Replicate exactly what displayResults does
                 const mapHtml = `<div id="map"></div>`;
                 const intelHtml = `
                     <div>
@@ -1106,7 +843,7 @@
                                 <button onclick="exportPDF('${data.destination}', '', \`${data.guide_text.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">📄 Export PDF</button>
                             </div>
                             <div class="chat-section">
-                                <h3>💬 Ask a Question</h3>
+                                <h3>Ask a Question</h3>
                                 <div class="chat-group">
                                     <input 
                                         type="text" 
@@ -1124,11 +861,12 @@
 
                 contentArea.innerHTML = mapHtml + intelHtml;
 
+                // Initialize map after DOM update
                 setTimeout(() => {
                     if (data.locations && data.locations.length > 0) {
                         initializeMap(data.locations);
                     } else {
-                        document.getElementById('map').innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">No locations found in the guide</p>';
+                        document.getElementById('map').innerHTML = '<p style="padding: 20px; text-align: center; color: #999;">No locations found in the guide</p>';
                     }
                 }, 0);
 
@@ -1149,7 +887,7 @@
                 if (!response.ok) throw new Error('Failed to delete trip');
 
                 showAlert('✅ Trip deleted successfully!', 'success');
-                showMyTrips();
+                showMyTrips(); // Refresh the list
 
             } catch (error) {
                 console.error('Error deleting trip:', error);
@@ -1166,6 +904,7 @@
                 }
             } catch (error) {
                 console.warn('API not reachable:', error);
+                showAlert('⚠️ Warning: API server may not be running. Make sure to start the backend with: python -m uvicorn api:app --host 0.0.0.0 --port 8000', 'error');
             }
         });
     </script>

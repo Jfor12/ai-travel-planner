@@ -1,8 +1,9 @@
 # 🌍 AI Travel Planner
 
-An intelligent travel guide generator powered by AI that creates personalized destination guides with interactive maps, real-time web data, and exportable PDFs. Built as a portfolio project showcasing full-stack development with modern web technologies.
+An intelligent travel guide generator powered by AI that creates personalized destination guides with interactive maps, real-time web data, and exportable PDFs. Built as a portfolio project showcasing full-stack development with modern cloud technologies.
 
-**Live Demo:** [https://jfor12.github.io/ai-travel-planner](https://jfor12.github.io/ai-travel-planner)
+**Live Demo:** [https://jfor12.github.io/ai-travel-planner](https://jfor12.github.io/ai-travel-planner)  
+**Backend API:** [https://ai-travel-planner-815578147202.europe-west1.run.app](https://ai-travel-planner-815578147202.europe-west1.run.app/health)
 
 ## ✨ Features
 
@@ -24,8 +25,9 @@ An intelligent travel guide generator powered by AI that creates personalized de
 
 ### Backend
 - **FastAPI** - High-performance Python web framework
-- **PostgreSQL** - Relational database for trip persistence
-- **Railway** - Cloud deployment platform
+- **PostgreSQL** - Relational database (Supabase)
+- **Google Cloud Run** - Serverless container deployment
+- **Docker** - Containerization
 
 ### AI & APIs
 - **Groq API** - Fast LLM inference (Llama 3.3 70B)
@@ -184,103 +186,69 @@ This is a **portfolio project** with intentional limitations:
 
 ## 🚢 Deployment
 
-### Google Cloud Run (Backend) - Recommended
+### Backend - Google Cloud Run
 
-**Prerequisites:**
-- Google Cloud account with billing enabled
-- [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) installed
-- PostgreSQL database (Cloud SQL or external)
+This project is deployed on **Google Cloud Run**, a serverless container platform with generous free tier limits.
 
-**Step 1: Setup Google Cloud Project**
-```bash
-# Login to Google Cloud
-gcloud auth login
+**Current Deployment:**
+- **Region:** europe-west1
+- **URL:** https://ai-travel-planner-815578147202.europe-west1.run.app
+- **Resources:** 512Mi memory, 1 CPU
+- **Scaling:** 0-5 instances (scales to zero when idle)
 
-# Create new project (or use existing)
-gcloud projects create ai-travel-planner --name="AI Travel Planner"
-gcloud config set project ai-travel-planner
+**Deploy Your Own:**
 
-# Enable required APIs
-gcloud services enable run.googleapis.com
-gcloud services enable containerregistry.googleapis.com
-```
+1. **Setup Google Cloud**
+   ```bash
+   gcloud auth login
+   gcloud config set project YOUR_PROJECT_ID
+   ```
 
-**Step 2: Build and Push Docker Image**
-```bash
-# Configure Docker for Google Cloud
-gcloud auth configure-docker
+2. **Deploy from Source**
+   ```bash
+   gcloud run deploy ai-travel-planner \
+     --source . \
+     --region europe-west1 \
+     --allow-unauthenticated \
+     --set-env-vars DATABASE_URL="your_postgres_url" \
+     --set-env-vars GROQ_API_KEY="your_groq_key" \
+     --set-env-vars TAVILY_API_KEY="your_tavily_key" \
+     --memory 512Mi \
+     --cpu 1 \
+     --max-instances 5
+   ```
 
-# Build image
-docker build -t gcr.io/ai-travel-planner/backend:latest .
+3. **Update Frontend**
+   Update `API_URL` in `index.html` with your Cloud Run URL.
 
-# Push to Google Container Registry
-docker push gcr.io/ai-travel-planner/backend:latest
-```
+**Why Google Cloud Run?**
+- ✅ 2 million requests/month free
+- ✅ Scales to zero (no cost when idle)
+- ✅ Auto-scaling and load balancing
+- ✅ Easy deployment from GitHub
 
-**Step 3: Deploy to Cloud Run**
-```bash
-# Deploy with environment variables
-gcloud run deploy ai-travel-planner \
-  --image gcr.io/ai-travel-planner/backend:latest \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars DATABASE_URL=your_postgres_url \
-  --set-env-vars GROQ_API_KEY=your_groq_key \
-  --set-env-vars TAVILY_API_KEY=your_tavily_key \
-  --port 8000 \
-  --memory 512Mi \
-  --cpu 1 \
-  --max-instances 10 \
-  --min-instances 0
-```
+### Frontend - GitHub Pages
 
-**Step 4: Get Service URL**
-```bash
-# Get the Cloud Run URL
-gcloud run services describe ai-travel-planner \
-  --region us-central1 \
-  --format 'value(status.url)'
-```
-
-**Step 5: Update Frontend**
-Update `API_URL` in [index.html](index.html) with your Cloud Run URL:
-```javascript
-const API_URL = 'https://ai-travel-planner-xxxxx-uc.a.run.app';
-```
-
-**Cost Estimate:**
-- Free tier: 2 million requests/month, 360,000 GB-seconds
-- After free tier: ~$0.40 per million requests
-- Your rate limiting keeps costs minimal
-
-### Alternative: Railway (Backend)
-1. Create new Railway project
-2. Connect GitHub repository
-3. Add environment variables
-4. Deploy automatically on push
-
-### GitHub Pages (Frontend)
-1. Push to `main` branch
-2. Enable GitHub Pages in repo settings
-3. Update `API_URL` in index.html with backend URL
+1. Push code to GitHub
+2. Enable Pages in repository settings
+3. Deploy from `main` branch
 
 ## 🐛 Troubleshooting
 
 **API Connection Failed**
-- Check Railway backend is running
-- Verify CORS settings in api.py
-- Ensure API_URL in index.html is correct
+- Check Cloud Run service is running: `gcloud run services list`
+- Verify CORS settings in `api.py`
+- Ensure `API_URL` in `index.html` matches your Cloud Run URL
 
 **Database Connection Error**
-- Verify DATABASE_URL format
+- Verify `DATABASE_URL` format
 - Run `python init_db.py` to create tables
-- Check PostgreSQL service is running
+- Check Supabase/PostgreSQL service is accessible
 
 **Rate Limit Exceeded**
-- Wait 1 hour or use cached destinations
-- Check IP-based rate limiting logic
-- Clear rate_limit_storage on backend restart
+- Wait 1 hour or try cached destinations
+- Cached guides bypass rate limits
+- Check IP-based rate limiting in `api.py`
 
 ## 🤝 Contributing
 
@@ -303,7 +271,8 @@ MIT License - feel free to use this code for learning or your own projects.
 
 - [Groq](https://groq.com) - Fast LLM inference
 - [Tavily](https://tavily.com) - Web search API
-- [Railway](https://railway.app) - Backend hosting
+- [Google Cloud Run](https://cloud.google.com/run) - Serverless hosting
+- [Supabase](https://supabase.com) - PostgreSQL database
 - [Leaflet](https://leafletjs.com) - Open-source mapping
 - [FastAPI](https://fastapi.tiangolo.com) - Modern Python web framework
 
