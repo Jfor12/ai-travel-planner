@@ -90,6 +90,35 @@ docker run -p 8000:8000 \
   ai-travel-planner
 ```
 
+## ☁️ Cloud Deployment
+
+### Google Cloud Run (Recommended)
+
+Deploy using GitHub Actions (auto-deploys on push):
+
+```bash
+# See DEPLOYMENT.md for full setup guide
+gcloud run deploy ai-travel-planner \
+  --source . \
+  --region us-central1 \
+  --allow-unauthenticated
+```
+
+**Benefits:**
+- 2M free requests/month
+- Auto-scaling (0 to 1000 instances)
+- Global CDN
+- Pay only for what you use
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for complete setup instructions.
+
+### Railway (Alternative)
+
+Simple one-click deployment:
+1. Connect GitHub repository
+2. Add environment variables
+3. Auto-deploys on push
+
 ## 📂 Project Structure
 
 ```
@@ -184,7 +213,77 @@ This is a **portfolio project** with intentional limitations:
 
 ## 🚢 Deployment
 
-### Railway (Backend)
+### Google Cloud Run (Backend) - Recommended
+
+**Prerequisites:**
+- Google Cloud account with billing enabled
+- [Google Cloud CLI](https://cloud.google.com/sdk/docs/install) installed
+- PostgreSQL database (Cloud SQL or external)
+
+**Step 1: Setup Google Cloud Project**
+```bash
+# Login to Google Cloud
+gcloud auth login
+
+# Create new project (or use existing)
+gcloud projects create ai-travel-planner --name="AI Travel Planner"
+gcloud config set project ai-travel-planner
+
+# Enable required APIs
+gcloud services enable run.googleapis.com
+gcloud services enable containerregistry.googleapis.com
+```
+
+**Step 2: Build and Push Docker Image**
+```bash
+# Configure Docker for Google Cloud
+gcloud auth configure-docker
+
+# Build image
+docker build -t gcr.io/ai-travel-planner/backend:latest .
+
+# Push to Google Container Registry
+docker push gcr.io/ai-travel-planner/backend:latest
+```
+
+**Step 3: Deploy to Cloud Run**
+```bash
+# Deploy with environment variables
+gcloud run deploy ai-travel-planner \
+  --image gcr.io/ai-travel-planner/backend:latest \
+  --platform managed \
+  --region us-central1 \
+  --allow-unauthenticated \
+  --set-env-vars DATABASE_URL=your_postgres_url \
+  --set-env-vars GROQ_API_KEY=your_groq_key \
+  --set-env-vars TAVILY_API_KEY=your_tavily_key \
+  --port 8000 \
+  --memory 512Mi \
+  --cpu 1 \
+  --max-instances 10 \
+  --min-instances 0
+```
+
+**Step 4: Get Service URL**
+```bash
+# Get the Cloud Run URL
+gcloud run services describe ai-travel-planner \
+  --region us-central1 \
+  --format 'value(status.url)'
+```
+
+**Step 5: Update Frontend**
+Update `API_URL` in [index.html](index.html) with your Cloud Run URL:
+```javascript
+const API_URL = 'https://ai-travel-planner-xxxxx-uc.a.run.app';
+```
+
+**Cost Estimate:**
+- Free tier: 2 million requests/month, 360,000 GB-seconds
+- After free tier: ~$0.40 per million requests
+- Your rate limiting keeps costs minimal
+
+### Alternative: Railway (Backend)
 1. Create new Railway project
 2. Connect GitHub repository
 3. Add environment variables
@@ -193,7 +292,7 @@ This is a **portfolio project** with intentional limitations:
 ### GitHub Pages (Frontend)
 1. Push to `main` branch
 2. Enable GitHub Pages in repo settings
-3. Update `API_URL` in index.html to Railway backend URL
+3. Update `API_URL` in index.html with backend URL
 
 ## 🐛 Troubleshooting
 
