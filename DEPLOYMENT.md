@@ -97,17 +97,29 @@ gcloud sql instances describe travel-planner-db --format="value(connectionName)"
 
 ### Step 5: Configure GitHub Secrets
 
-Go to your GitHub repository → Settings → Secrets and variables → Actions
+Go to your GitHub repository → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
 
-Add these secrets:
+Add these secrets (click "New repository secret" for each):
 
 | Secret Name | Value | Where to Find |
 |-------------|-------|---------------|
 | `GCP_PROJECT_ID` | `ai-travel-planner-123` | Your project ID |
-| `GCP_SA_KEY` | Contents of `key.json` | Service account key file |
+| `GCP_SA_KEY` | **Entire contents** of `key.json` file | Open key.json and copy ALL text (including `{` and `}`) |
 | `DATABASE_URL` | `postgresql://user:pass@host/db` | Database connection string |
 | `GROQ_API_KEY` | Your Groq API key | [groq.com](https://console.groq.com) |
 | `TAVILY_API_KEY` | Your Tavily API key | [tavily.com](https://tavily.com) |
+
+**Important for GCP_SA_KEY:**
+```bash
+# Copy entire key.json contents
+cat key.json
+# Copy everything from { to } and paste into GitHub secret
+```
+
+**Verify secrets are set:**
+- Go to Settings → Secrets and variables → Actions
+- You should see all 5 secrets listed (values are hidden)
+- If a secret is missing, the workflow will fail
 
 ### Step 6: Deploy
 
@@ -246,6 +258,35 @@ Or use [Google Cloud Console](https://console.cloud.google.com/run):
 
 ## 🐛 Troubleshooting
 
+### GitHub Actions Authentication Error
+
+**Error:** `must specify exactly one of "workload_identity_provider" or "credentials_json"`
+
+**Solutions:**
+
+1. **Verify GCP_SA_KEY secret is set:**
+   ```bash
+   # In GitHub: Settings → Secrets and variables → Actions
+   # Make sure GCP_SA_KEY exists and contains the full JSON key
+   ```
+
+2. **Check key.json format:**
+   ```bash
+   # Key should be valid JSON starting with {
+   cat key.json
+   # Should show: {"type": "service_account", "project_id": ...}
+   ```
+
+3. **Re-create the secret:**
+   - Delete existing GCP_SA_KEY secret
+   - Create new secret with name: `GCP_SA_KEY`
+   - Paste **entire** contents of key.json (don't add quotes or modify)
+   - Save and re-run workflow
+
+4. **Verify from Actions tab:**
+   - Go to Actions → Latest workflow run → View logs
+   - Check if "Authenticate to Google Cloud" step passes
+
 **Build Fails:**
 - Check Dockerfile syntax
 - Verify requirements.txt includes all dependencies
@@ -264,6 +305,10 @@ Or use [Google Cloud Console](https://console.cloud.google.com/run):
 **CORS Errors:**
 - Ensure `api.py` has correct CORS origins
 - Add your frontend domain to allowed origins
+
+**Port Binding Issues:**
+- Cloud Run automatically sets `PORT` env variable
+- Dockerfile should use: `CMD python -m uvicorn api:app --host 0.0.0.0 --port ${PORT}`
 
 ## 🔄 Updating Deployment
 
