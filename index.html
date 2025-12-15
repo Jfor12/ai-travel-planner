@@ -69,12 +69,6 @@
                 radial-gradient(circle at 40% 40%, rgba(240, 147, 251, 0.1) 0%, transparent 40%);
             pointer-events: none;
             z-index: -1;
-            animation: pulse 15s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.8; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.1); }
         }
 
         .container {
@@ -154,12 +148,11 @@
         }
 
         .warning-banner {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(245, 158, 11, 0.1));
+            background: rgba(239, 68, 68, 0.1);
             border: 1px solid rgba(239, 68, 68, 0.3);
             border-radius: 16px;
             padding: 16px 24px;
             margin: 20px 0;
-            backdrop-filter: blur(10px);
             font-size: 0.95em;
         }
 
@@ -171,17 +164,14 @@
             background: var(--bg-card);
             border-radius: 24px;
             overflow: hidden;
-            box-shadow: 
-                0 20px 60px var(--shadow),
-                0 0 0 1px var(--border);
+            box-shadow: 0 10px 40px var(--shadow);
             margin-bottom: 30px;
-            backdrop-filter: blur(20px);
             border: 1px solid var(--border);
         }
 
         .form-section {
             padding: 30px;
-            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));
+            background: var(--bg-secondary);
             border-bottom: 1px solid var(--border);
         }
 
@@ -214,7 +204,6 @@
             outline: none;
             border-color: var(--accent-primary);
             box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
-            transform: translateY(-1px);
         }
 
         select {
@@ -235,26 +224,9 @@
             font-size: 1em;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: transform 0.2s, box-shadow 0.2s;
             white-space: nowrap;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-            position: relative;
-            overflow: hidden;
-        }
-
-        button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s;
-        }
-
-        button:hover::before {
-            left: 100%;
         }
 
         button:hover {
@@ -331,6 +303,8 @@
             overflow-y: auto;
             padding-right: 10px;
             max-height: 600px;
+            transform: translateZ(0);
+            -webkit-overflow-scrolling: touch;
         }
 
         .intel-section::-webkit-scrollbar {
@@ -343,12 +317,12 @@
         }
 
         .intel-section::-webkit-scrollbar-thumb {
-            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            background: var(--accent-primary);
             border-radius: 10px;
         }
 
         .intel-section::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(135deg, var(--accent-secondary), var(--accent-tertiary));
+            background: var(--accent-secondary);
         }
 
         .intel-content {
@@ -405,23 +379,21 @@
         }
 
         .error {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1));
+            background: rgba(239, 68, 68, 0.1);
             color: var(--error);
             padding: 16px 20px;
             border-radius: 12px;
             margin-bottom: 15px;
             border: 1px solid rgba(239, 68, 68, 0.3);
-            backdrop-filter: blur(10px);
         }
 
         .success {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
+            background: rgba(16, 185, 129, 0.1);
             color: var(--success);
             padding: 16px 20px;
             border-radius: 12px;
             margin-bottom: 15px;
             border: 1px solid rgba(16, 185, 129, 0.3);
-            backdrop-filter: blur(10px);
         }
 
         .location-list {
@@ -450,8 +422,8 @@
         }
 
         .location-item:hover {
-            transform: translateX(8px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
             border-left-color: var(--accent-tertiary);
         }
 
@@ -518,7 +490,7 @@
         }
 
         .chat-response {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            background: rgba(102, 126, 234, 0.1);
             padding: 18px;
             border-radius: 12px;
             margin-top: 15px;
