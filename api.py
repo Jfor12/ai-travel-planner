@@ -91,15 +91,33 @@ class LocationData(BaseModel):
 # HEALTH CHECK & INITIALIZATION
 # ============================================================================
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "POST"])
 def health_check():
-    """Check API health and environment configuration"""
-    return {
+    """Check API health and keep Supabase active by pinging the database"""
+    from datetime import datetime
+    
+    status_info = {
         "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
         "has_groq_key": bool(os.getenv("GROQ_API_KEY")),
         "has_tavily_key": bool(os.getenv("TAVILY_API_KEY")),
         "has_database": bool(os.getenv("DATABASE_URL")),
     }
+    
+    # Ping database to keep Supabase active
+    try:
+        conn = get_connection()
+        if conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")  # Simple query to wake up database
+            conn.close()
+            status_info["database_status"] = "active"
+        else:
+            status_info["database_status"] = "unavailable"
+    except Exception as e:
+        status_info["database_status"] = f"error: {str(e)}"
+    
+    return status_info
 
 
 @app.post("/api/init-db")
