@@ -91,7 +91,7 @@ class LocationData(BaseModel):
 # HEALTH CHECK & INITIALIZATION
 # ============================================================================
 
-@app.api_route("/health", methods=["GET", "POST"])
+@app.api_route("/health", methods=["GET", "POST", "HEAD"])
 def health_check():
     """Check API health and keep Supabase active by pinging the database"""
     from datetime import datetime
