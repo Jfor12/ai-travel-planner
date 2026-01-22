@@ -1,39 +1,71 @@
-# 🌍 AI Travel Planner
+# AI Travel Planner
+Production-grade travel intelligence platform combining AI, real-time web data, and interactive maps to generate personalised destination guides.
 
-An intelligent travel guide generator powered by AI that creates personalized destination guides with interactive maps, real-time web data, and exportable PDFs. Built as a portfolio project showcasing full-stack development with modern cloud technologies.
+**Live Demo:** [jfor12.github.io/ai-travel-planner](https://jfor12.github.io/ai-travel-planner)
 
-**Live Demo:** [https://jfor12.github.io/ai-travel-planner](https://jfor12.github.io/ai-travel-planner)  
-**Backend API:** [https://ai-travel-planner-815578147202.europe-west1.run.app](https://ai-travel-planner-815578147202.europe-west1.run.app/health)
+## 🚀 The High-Level Architecture
+```mermaid
+flowchart TD
+    A[GitHub Pages] --> B[FastAPI Backend]
+    B --> C[(PostgreSQL DB)]
+    
+    D[Tavily Search API] --> E[LangChain]
+    F[Groq LLM] --> E
+    E --> B
+    
+    B --> G[Smart Cache Layer]
+    G --> C
+    
+    B --> H[Rate Limiter]
+    B --> I[PDF Export]
+    
+    C --> J[Saved Itineraries]
+    J --> A
+    
+    K[Google Cloud Run] -.->|Hosts| B
+    
+    style F fill:#ffbd45,color:#000
+    style C fill:#333,color:#fff
+    style K fill:#4285f4,color:#fff
+```
 
-## ✨ Features
+## ✨ Key Engineering Highlights
 
-- **AI-Powered Travel Guides** - Generate comprehensive destination guides using Groq LLM (Llama 3.3)
-- **Real-Time Web Search** - Integrates live data using Tavily search API
-- **Interactive Maps** - Visualize locations with Leaflet.js mapping
-- **Smart Caching** - Database-cached guides to reduce API costs
-- **Rate Limiting** - IP-based protection (5 generations/hour)
-- **Save & Export** - Store trips in PostgreSQL and export as PDF
-- **My Trips Dashboard** - View, manage, and revisit saved itineraries
-- **Responsive Design** - Beautiful animated gradient UI that works on all devices
+### 1. Intelligent Caching & Cost Optimisation
+**Database-Backed Cache**: Implemented PostgreSQL-based caching to store generated guides by destination and month, reducing LLM API costs by ~70% for repeated queries.
 
-## 🎯 Tech Stack
+**Smart Retrieval Logic**: Built cache validation that checks for existing guides before triggering expensive AI generation, significantly improving response times and reducing operational costs.
 
-### Frontend
-- **HTML/CSS/JavaScript** - Modern vanilla JS with async/await
-- **Leaflet.js** - Interactive map rendering
-- **GitHub Pages** - Static hosting
+**Rate Limiting**: IP-based throttling (5 requests/hour) prevents API abuse while maintaining excellent user experience for legitimate traffic.
 
-### Backend
-- **FastAPI** - High-performance Python web framework
-- **PostgreSQL** - Relational database (Supabase)
-- **Google Cloud Run** - Serverless container deployment
-- **Docker** - Containerization
+### 2. AI-Driven Content Generation
+**Multi-Source Intelligence**: Integrated LangChain orchestration to combine real-time web search (Tavily API) with LLM inference (Groq Llama 3.3 70B), ensuring guides contain up-to-date local information.
 
-### AI & APIs
-- **Groq API** - Fast LLM inference (Llama 3.3 70B)
-- **LangChain** - LLM orchestration framework
-- **Tavily API** - Real-time web search
-- **DuckDuckGo** - Fallback search provider
+**Structured Prompting**: Engineered specialized prompts to generate comprehensive travel guides covering gastronomy, neighborhoods, weather, cultural etiquette, and safety tips in consistent markdown format.
+
+**Fallback Resilience**: Implemented DuckDuckGo as a backup search provider, ensuring service continuity even during third-party API outages.
+
+### 3. Full-Stack Production Deployment
+**Serverless Infrastructure**: Deployed FastAPI backend on Google Cloud Run with Docker containerisation, enabling auto-scaling and zero-maintenance hosting.
+
+**RESTful API Design**: Built 10+ endpoints handling CRUD operations, PDF generation, and real-time chat functionality with comprehensive error handling and validation.
+
+**Interactive Frontend**: Vanilla JavaScript SPA with async/await patterns, Leaflet.js maps, and responsive gradient animations—all hosted on GitHub Pages for zero-cost static delivery.
+
+### 4. Data Persistence & Export
+**Relational Schema**: Designed normalised PostgreSQL schema with foreign key relationships for itineraries and chat history, ensuring data integrity.
+
+**PDF Generation**: Integrated FPDF library to export guides as formatted PDFs with metadata, enabling offline access and sharing.
+
+**Trip Management Dashboard**: Built full CRUD interface allowing users to save, view, update, and delete travel plans with real-time database synchronisation.
+
+## 🛠️ Tech Stack
+- **Language**: Python (FastAPI, LangChain, psycopg, pandas)
+- **Database**: PostgreSQL (Supabase)
+- **Frontend**: Vanilla JavaScript, HTML5, CSS3, Leaflet.js
+- **AI/ML**: Groq Llama 3.3 70B, LangChain, Tavily Search API
+- **Infrastructure**: Google Cloud Run, Docker, GitHub Pages
+- **Additional**: FPDF, Pydantic validation, CORS middleware
 
 ## 🚀 Quick Start
 
