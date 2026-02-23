@@ -71,6 +71,7 @@
             text-align: center;
             margin-bottom: 40px;
             position: relative;
+            padding-top: 56px; /* room for the fixed back button */
         }
 
         .header-content {
@@ -100,6 +101,28 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
             letter-spacing: -1px;
+        }
+
+        /* centered header block for desktop to avoid overlap with fixed button */
+        .header-center {
+            display: none;
+        }
+
+        .header-center .logo {
+            font-size: 3.2em;
+            line-height: 1;
+        }
+
+        .header-center .header-text h1 {
+            margin: 0;
+            font-size: 2.2em;
+            line-height: 1.05;
+        }
+
+        .header-center .header-text p {
+            margin: 6px 0 0 0;
+            color: var(--text-secondary);
+            font-size: 1em;
         }
 
         header p {
@@ -267,6 +290,45 @@
             .logo-section {
                 flex-direction: column;
                 text-align: center;
+            }
+            /* revert absolute centering on smaller screens */
+            header h1 {
+                position: static;
+                transform: none;
+                top: auto;
+                left: auto;
+                z-index: auto;
+            }
+            header {
+                padding-top: 0;
+            }
+        }
+
+        /* Desktop: show centered header and hide left logo section to avoid duplicates */
+        @media (min-width: 969px) {
+            .header-center {
+                display: flex;
+                position: absolute;
+                left: 50%;
+                transform: translateX(-50%);
+                top: 12px;
+                z-index: 1100;
+                text-align: left;
+                align-items: center;
+                gap: 14px;
+            }
+
+            .header-center .header-text {
+                display: flex;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .header-content .logo-section {
+                visibility: hidden;
+                height: 0;
+                overflow: hidden;
+                pointer-events: none;
             }
         }
 
@@ -580,6 +642,13 @@
 <body data-theme="dark">
     <a href="https://jacopofornesi.co.uk/" class="back-website" target="_blank" rel="noopener noreferrer" aria-label="Back to website">← Back to website</a>
     <div class="container">
+        <div class="header-center" aria-hidden="false">
+            <div class="logo">🌍</div>
+            <div class="header-text">
+                <h1>AI Travel Planner</h1>
+                <p>Get instant travel intelligence with AI-powered guides</p>
+            </div>
+        </div>
         <header>
             <div class="header-content">
                 <div class="logo-section">
