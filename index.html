@@ -59,8 +59,9 @@
 
 
         .container {
-            max-width: 1400px;
-            margin: 0 auto;
+            /* allow the layout to span the full viewport while keeping body padding */
+            max-width: none;
+            margin: 0;
             width: 100%;
             transform: translateZ(0);
             will-change: scroll-position;
