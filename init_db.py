@@ -13,7 +13,7 @@ def init_database():
     """Initialize database tables"""
     db_url = os.getenv('DATABASE_URL')
     if not db_url:
-        print("❌ DATABASE_URL not configured")
+        print("DATABASE_URL not configured")
         return False
     
     try:
@@ -43,10 +43,10 @@ def init_database():
             
             conn.commit()
         conn.close()
-        print("✅ Database tables initialized successfully")
+        print("Database tables initialized successfully")
         return True
     except Exception as e:
-        print(f"❌ Error initializing database: {e}")
+        print(f"Error initializing database: {e}")
         return False
 
 if __name__ == "__main__":

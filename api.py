@@ -7,14 +7,14 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
-from typing import Optional, List, Dict
+from typing import Optional, Dict
 import os
 import time
 from collections import defaultdict
 from dotenv import load_dotenv
 
 # Import core modules
-from ai import generate_intel, run_chat_response, generate_place_summary
+from ai import generate_intel, run_chat_response
 from maps import extract_map_data, create_pdf
 from db import save_itinerary, get_connection, get_history, get_itinerary_details, update_itinerary, delete_itinerary, get_cached_guide
 
@@ -79,12 +79,6 @@ class SaveRequest(BaseModel):
     destination: str
     month: str
     guide_text: str
-
-
-class LocationData(BaseModel):
-    name: str
-    lat: float
-    lon: float
 
 
 # ============================================================================

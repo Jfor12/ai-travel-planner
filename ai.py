@@ -57,18 +57,18 @@ def generate_intel(destination, month, model_name=None, temperature=None):
     
     FORMAT (Markdown):
     
-    ## 🍝 Gastronomy (What to order)
+    ## Gastronomy (What to order)
     * **[Dish]:** [Desc].
     
-    ## 🏘️ Neighborhoods
+    ## Neighborhoods
     * **[Area]:** [Vibe].
     
-    ## ⚠️ Logistics
+    ## Logistics
     * **Tips:** [Rule].
     * **Transport:** [Best method].
     * **Safety:** [Scams].
     
-    ## 🎒 Seasonal ({month})
+    ## Seasonal ({month})
     * **Weather:** [Avg Temp/Rain].
     * **Crowds:** [High/Low].
 

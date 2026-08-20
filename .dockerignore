@@ -25,5 +25,5 @@ docker-compose*.yml
 dist/
 build/
 
-# Streamlit cache / runtime
-.streamlit/
+# Local cache / runtime
+.cache/
