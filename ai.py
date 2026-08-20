@@ -5,6 +5,16 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 
+DEFAULT_INTEL_MODEL = "llama-4-scout-17b-16e-instruct"
+
+
+def get_intel_model(model_name=None):
+    configured_model = model_name or os.getenv("GROQ_MODEL_INTEL", DEFAULT_INTEL_MODEL)
+    if configured_model == "llama-3.3-70b-versatile":
+        return DEFAULT_INTEL_MODEL
+    return configured_model
+
+
 def generate_intel(destination, month, model_name=None, temperature=None):
     groq_api = os.getenv("GROQ_API_KEY")
     tavily_api = os.getenv("TAVILY_API_KEY")
@@ -26,7 +36,7 @@ def generate_intel(destination, month, model_name=None, temperature=None):
 
     llm = ChatGroq(
         groq_api_key=groq_api,
-        model_name=model_name or os.getenv('GROQ_MODEL_INTEL', 'llama-3.3-70b-versatile'),
+        model_name=get_intel_model(model_name),
         temperature=float(temperature or os.getenv('GROQ_TEMP_INTEL', '0.3')),
     )
 
@@ -107,7 +117,7 @@ def run_gen_response(guide_context, user_query, model_name=None, temperature=Non
 
     llm = ChatGroq(
         groq_api_key=groq_api,
-        model_name=model_name or os.getenv('GROQ_MODEL_INTEL', 'llama-3.3-70b-versatile'),
+        model_name=get_intel_model(model_name),
         temperature=float(temperature or os.getenv('GROQ_TEMP_INTEL', '0.3')),
     )
 
