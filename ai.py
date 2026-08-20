@@ -1,5 +1,6 @@
 import os
 import json
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from langchain_groq import ChatGroq
@@ -19,6 +20,7 @@ PREFERRED_MODELS = (
     "openai/gpt-oss-20b",
 )
 _available_models = None
+DEFAULT_MODEL_ID = "llama-3.3-70b-versatile"
 
 
 def get_available_models():
@@ -39,6 +41,10 @@ def get_available_models():
             payload = json.load(response)
         _available_models = {item["id"] for item in payload.get("data", [])}
         return _available_models
+    except HTTPError as error:
+        if error.code == 403:
+            return None
+        raise RuntimeError(f"Could not read models available to the Groq key: {error}") from error
     except Exception as error:
         raise RuntimeError(f"Could not read models available to the Groq key: {error}") from error
 
@@ -55,6 +61,9 @@ def get_intel_model(model_name=None):
         configured_model = MODEL_ALIASES.get(normalized, configured_model.strip())
 
     available_models = get_available_models()
+    if available_models is None:
+        return configured_model or DEFAULT_MODEL_ID
+
     if configured_model in available_models:
         return configured_model
 
