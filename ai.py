@@ -10,11 +10,11 @@ from langchain_core.output_parsers import StrOutputParser
 
 
 PREFERRED_MODELS = (
+    "openai/gpt-oss-120b",
     "openai/gpt-oss-20b",
-    "groq/compound",
 )
 _available_models = None
-DEFAULT_MODEL_ID = "openai/gpt-oss-20b"
+DEFAULT_MODEL_ID = "openai/gpt-oss-120b"
 
 
 def get_available_models():
