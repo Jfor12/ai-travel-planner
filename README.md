@@ -54,7 +54,7 @@ Create a `.env` file with:
 DATABASE_URL=your_supabase_connection_string
 GROQ_API_KEY=your_groq_api_key
 TAVILY_API_KEY=your_tavily_api_key
-# Optional: use an exact model ID returned by Groq's /models endpoint.
+# Optional: use one exact model ID returned by Groq's /models endpoint.
 GROQ_MODEL_ID=your_available_groq_model_id
 ```
 
@@ -69,7 +69,7 @@ The repository includes [render.yaml](render.yaml), which defines the free Docke
 1. Create a Blueprint and connect the GitHub repository.
 2. Select the `main` branch.
 3. Enter `DATABASE_URL`, `GROQ_API_KEY`, and `TAVILY_API_KEY` as secret environment variables.
-4. Optionally set `GROQ_MODEL_ID` to an exact model ID available to your Groq key. The service also accepts `GROQ_MODEL_NAME`, including the display label `Llama 3.3 70B`.
+4. Optionally set the single model setting, `GROQ_MODEL_ID`, to an exact model ID available to your Groq key. Remove any older model variables such as `GROQ_MODEL_NAME`, `GROQ_MODEL_INTEL`, or `GROQ_MODEL_CHAT`.
 5. Apply the Blueprint and wait for the Docker deployment to finish.
 
 Render supplies the `PORT` environment variable used by the Dockerfile. The free service may sleep when idle, so the first request after inactivity can be slow.
