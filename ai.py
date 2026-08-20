@@ -10,18 +10,17 @@ from langchain_core.output_parsers import StrOutputParser
 
 
 MODEL_ALIASES = {
-    "llama 3.3 70b": "llama-3.3-70b-versatile",
-    "llama 3.3 70b versatile": "llama-3.3-70b-versatile",
-    "llama-3.1-8b-instant": "llama-3.3-70b-versatile",
+    "llama 3.3 70b": "openai/gpt-oss-20b",
+    "llama 3.3 70b versatile": "openai/gpt-oss-20b",
+    "llama-3.3-70b-versatile": "openai/gpt-oss-20b",
+    "llama-3.1-8b-instant": "openai/gpt-oss-20b",
 }
 PREFERRED_MODELS = (
-    "llama-3.3-70b-versatile",
-    "llama-4-scout-17b-16e-instruct",
-    "llama-3.1-8b-instant",
     "openai/gpt-oss-20b",
+    "groq/compound",
 )
 _available_models = None
-DEFAULT_MODEL_ID = "llama-3.3-70b-versatile"
+DEFAULT_MODEL_ID = "openai/gpt-oss-20b"
 
 
 def get_available_models():
