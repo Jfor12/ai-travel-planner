@@ -1,21 +1,71 @@
 import os
+import json
+from urllib.request import Request, urlopen
+
 from langchain_groq import ChatGroq
 from langchain_community.tools import TavilySearchResults
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 
-DEFAULT_INTEL_MODEL = "llama-3.1-8b-instant"
+MODEL_ALIASES = {
+    "llama 3.3 70b": "llama-3.3-70b-versatile",
+    "llama 3.3 70b versatile": "llama-3.3-70b-versatile",
+}
+PREFERRED_MODELS = (
+    "llama-3.3-70b-versatile",
+    "llama-4-scout-17b-16e-instruct",
+    "llama-3.1-8b-instant",
+    "openai/gpt-oss-20b",
+)
+_available_models = None
+
+
+def get_available_models():
+    global _available_models
+    if _available_models is not None:
+        return _available_models
+
+    groq_api = os.getenv("GROQ_API_KEY")
+    if not groq_api:
+        raise RuntimeError("GROQ_API_KEY is not configured")
+
+    request = Request(
+        "https://api.groq.com/openai/v1/models",
+        headers={"Authorization": f"Bearer {groq_api}"},
+    )
+    try:
+        with urlopen(request, timeout=10) as response:
+            payload = json.load(response)
+        _available_models = {item["id"] for item in payload.get("data", [])}
+        return _available_models
+    except Exception as error:
+        raise RuntimeError(f"Could not read models available to the Groq key: {error}") from error
 
 
 def get_intel_model(model_name=None):
-    configured_model = model_name or os.getenv("GROQ_MODEL_INTEL", DEFAULT_INTEL_MODEL)
-    if configured_model in {
-        "llama-3.3-70b-versatile",
-        "llama-4-scout-17b-16e-instruct",
-    }:
-        return DEFAULT_INTEL_MODEL
-    return configured_model
+    configured_model = (
+        model_name
+        or os.getenv("GROQ_MODEL_ID")
+        or os.getenv("GROQ_MODEL_INTEL")
+        or os.getenv("GROQ_MODEL_NAME")
+    )
+    if configured_model:
+        normalized = configured_model.strip().lower()
+        configured_model = MODEL_ALIASES.get(normalized, configured_model.strip())
+
+    available_models = get_available_models()
+    if configured_model in available_models:
+        return configured_model
+
+    for candidate in PREFERRED_MODELS:
+        if candidate in available_models:
+            return candidate
+
+    raise RuntimeError(
+        "No usable Groq model is available to this API key. "
+        f"Available models: {', '.join(sorted(available_models))}"
+    )
 
 
 def generate_intel(destination, month, model_name=None, temperature=None):
@@ -92,7 +142,7 @@ def run_chat_response(guide_context, user_query, model_name=None, temperature=No
     groq_api = os.getenv("GROQ_API_KEY")
     llm = ChatGroq(
         groq_api_key=groq_api,
-        model_name=model_name or os.getenv('GROQ_MODEL_CHAT', 'llama-3.1-8b-instant'),
+        model_name=get_intel_model(model_name or os.getenv("GROQ_MODEL_CHAT")),
         temperature=float(temperature or os.getenv('GROQ_TEMP_CHAT', '0.5')),
     )
 
