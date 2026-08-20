@@ -1,5 +1,3 @@
-streamlit
-streamlit-option-menu
 psycopg[binary]
 python-dotenv
 langchain==0.2.14
@@ -10,7 +8,6 @@ thefuzz
 tavily-python
 pandas
 fpdf
-pydeck
 fastapi
 uvicorn[standard]
 pydantic
