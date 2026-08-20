@@ -5,12 +5,15 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 
-DEFAULT_INTEL_MODEL = "llama-4-scout-17b-16e-instruct"
+DEFAULT_INTEL_MODEL = "llama-3.1-8b-instant"
 
 
 def get_intel_model(model_name=None):
     configured_model = model_name or os.getenv("GROQ_MODEL_INTEL", DEFAULT_INTEL_MODEL)
-    if configured_model == "llama-3.3-70b-versatile":
+    if configured_model in {
+        "llama-3.3-70b-versatile",
+        "llama-4-scout-17b-16e-instruct",
+    }:
         return DEFAULT_INTEL_MODEL
     return configured_model
 
