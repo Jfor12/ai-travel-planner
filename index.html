@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Travel Planner</title>
+    <title>🌍 AI Travel Planner</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <style>
@@ -643,7 +643,7 @@
     <a href="https://jacopofornesi.co.uk/" class="back-website" target="_blank" rel="noopener noreferrer" aria-label="Back to website">Back to website</a>
     <div class="container">
         <div class="header-center" aria-hidden="false">
-            <div class="logo">Travel</div>
+            <div class="logo">🌍</div>
             <div class="header-text">
                 <h1>AI Travel Planner</h1>
                 <p>Get instant travel intelligence with AI-powered guides</p>
@@ -652,14 +652,14 @@
         <header>
             <div class="header-content">
                 <div class="logo-section">
-                    <div class="logo">Travel</div>
+                    <div class="logo">🌍</div>
                     <div>
                         <h1>AI Travel Planner</h1>
                         <p>Get instant travel intelligence with AI-powered guides</p>
                     </div>
                 </div>
                 <button class="theme-toggle" onclick="toggleTheme()">
-                    <span class="theme-icon">Dark</span>
+                    <span class="theme-icon">🌙</span>
                     <span id="themeText">Dark Mode</span>
                 </button>
             </div>
@@ -706,8 +706,8 @@
                             <option value="December">December</option>
                         </select>
                     </div>
-                    <button id="generateBtn">Generate Guide</button>
-                    <button class="secondary" id="myTripsBtn">My Trips</button>
+                    <button id="generateBtn">✨ Generate Guide</button>
+                    <button class="secondary" id="myTripsBtn">📚 My Trips</button>
                 </div>
             </div>
 
@@ -715,7 +715,7 @@
 
             <div id="contentArea" class="content">
                 <div class="initial-state" style="grid-column: 1 / -1;">
-                    <div class="icon">Map</div>
+                    <div class="icon">🗺️</div>
                     <h3>Ready to explore?</h3>
                     <p>Select a destination and month to generate your personalized AI travel guide</p>
                 </div>
@@ -752,12 +752,12 @@
             
             if (currentTheme === 'dark') {
                 body.setAttribute('data-theme', 'light');
-                themeIcon.textContent = 'Light';
+                themeIcon.textContent = '☀️';
                 themeText.textContent = 'Light Mode';
                 localStorage.setItem('theme', 'light');
             } else {
                 body.setAttribute('data-theme', 'dark');
-                themeIcon.textContent = 'Dark';
+                themeIcon.textContent = '🌙';
                 themeText.textContent = 'Dark Mode';
                 localStorage.setItem('theme', 'dark');
             }
@@ -772,7 +772,7 @@
             
             body.setAttribute('data-theme', savedTheme);
             if (savedTheme === 'light') {
-                themeIcon.textContent = 'Light';
+                themeIcon.textContent = '☀️';
                 themeText.textContent = 'Light Mode';
             }
         });
@@ -867,7 +867,7 @@
                         </div>
                         ${data.locations.length > 0 ? `
                             <div class="location-list">
-                                <h3>Locations (${data.locations.length})</h3>
+                                <h3>📍 Locations (${data.locations.length})</h3>
                                 ${data.locations.map((loc, i) => `
                                     <div class="location-item" onclick="focusLocation(${loc.lat}, ${loc.lon})">
                                         <div class="name">${loc.name}</div>
@@ -877,11 +877,11 @@
                             </div>
                         ` : ''}
                         <div class="button-group">
-                            <button onclick="saveGuide('${data.destination}', '${data.month}', \`${data.intel.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">Save Guide</button>
-                            <button onclick="exportPDF('${data.destination}', '${data.month}', \`${data.intel.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">Export PDF</button>
+                            <button onclick="saveGuide('${data.destination}', '${data.month}', \`${data.intel.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">💾 Save Guide</button>
+                            <button onclick="exportPDF('${data.destination}', '${data.month}', \`${data.intel.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">📄 Export PDF</button>
                         </div>
                         <div class="chat-section">
-                            <h3>Ask a Question</h3>
+                            <h3>💬 Ask a Question</h3>
                             <div class="chat-group">
                                 <input 
                                     type="text" 
@@ -1097,7 +1097,7 @@
                 if (data.trips.length === 0) {
                     contentArea.innerHTML = `
                         <div class="initial-state" style="grid-column: 1 / -1;">
-                            <div class="icon">Trips</div>
+                            <div class="icon">📚</div>
                             <h3>No saved trips yet</h3>
                             <p>Generate a guide and save it to see it here</p>
                         </div>
@@ -1107,7 +1107,7 @@
 
                 const tripsHtml = `
                     <div style="grid-column: 1 / -1; padding: 20px;">
-                        <h2>My Saved Trips</h2>
+                        <h2>📚 My Saved Trips</h2>
                         <div style="display: grid; gap: 15px; margin-top: 20px;">
                             ${data.trips.map(trip => `
                                 <div class="location-item" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
@@ -1116,8 +1116,8 @@
                                         <div class="coords">${new Date(trip.created_at).toLocaleDateString()}</div>
                                     </div>
                                     <div class="button-group" style="margin: 0;">
-                                        <button onclick="event.stopPropagation(); viewTrip(${trip.id})" style="padding: 10px 20px;">View</button>
-                                        <button onclick="event.stopPropagation(); deleteTrip(${trip.id})" style="padding: 10px 20px; background: linear-gradient(135deg, #ef4444, #dc2626);">Delete</button>
+                                        <button onclick="event.stopPropagation(); viewTrip(${trip.id})" style="padding: 10px 20px;">👁️ View</button>
+                                        <button onclick="event.stopPropagation(); deleteTrip(${trip.id})" style="padding: 10px 20px; background: linear-gradient(135deg, #ef4444, #dc2626);">🗑️ Delete</button>
                                     </div>
                                 </div>
                             `).join('')}
@@ -1155,7 +1155,7 @@
                             </div>
                             ${data.locations && data.locations.length > 0 ? `
                                 <div class="location-list">
-                                    <h3>Locations (${data.locations.length})</h3>
+                                    <h3>📍 Locations (${data.locations.length})</h3>
                                     ${data.locations.map((loc, i) => `
                                         <div class="location-item" onclick="focusLocation(${loc.lat}, ${loc.lon})">
                                             <div class="name">${loc.name}</div>
@@ -1165,10 +1165,10 @@
                                 </div>
                             ` : ''}
                             <div class="button-group">
-                                <button onclick="exportPDF('${data.destination}', '', \`${data.guide_text.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">Export PDF</button>
+                                <button onclick="exportPDF('${data.destination}', '', \`${data.guide_text.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">📄 Export PDF</button>
                             </div>
                             <div class="chat-section">
-                                <h3>Ask a Question</h3>
+                                <h3>💬 Ask a Question</h3>
                                 <div class="chat-group">
                                     <input 
                                         type="text" 
