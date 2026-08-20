@@ -9,12 +9,6 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
 
-MODEL_ALIASES = {
-    "llama 3.3 70b": "openai/gpt-oss-20b",
-    "llama 3.3 70b versatile": "openai/gpt-oss-20b",
-    "llama-3.3-70b-versatile": "openai/gpt-oss-20b",
-    "llama-3.1-8b-instant": "openai/gpt-oss-20b",
-}
 PREFERRED_MODELS = (
     "openai/gpt-oss-20b",
     "groq/compound",
@@ -50,15 +44,8 @@ def get_available_models():
 
 
 def get_intel_model(model_name=None):
-    configured_model = (
-        model_name
-        or os.getenv("GROQ_MODEL_ID")
-        or os.getenv("GROQ_MODEL_NAME")
-        or os.getenv("GROQ_MODEL_INTEL")
-    )
-    if configured_model:
-        normalized = configured_model.strip().lower()
-        configured_model = MODEL_ALIASES.get(normalized, configured_model.strip())
+    configured_model = model_name or os.getenv("GROQ_MODEL_ID") or DEFAULT_MODEL_ID
+    configured_model = configured_model.strip()
 
     available_models = get_available_models()
     if available_models is None:
