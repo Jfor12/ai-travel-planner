@@ -12,6 +12,7 @@ from langchain_core.output_parsers import StrOutputParser
 MODEL_ALIASES = {
     "llama 3.3 70b": "llama-3.3-70b-versatile",
     "llama 3.3 70b versatile": "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant": "llama-3.3-70b-versatile",
 }
 PREFERRED_MODELS = (
     "llama-3.3-70b-versatile",
@@ -53,8 +54,8 @@ def get_intel_model(model_name=None):
     configured_model = (
         model_name
         or os.getenv("GROQ_MODEL_ID")
-        or os.getenv("GROQ_MODEL_INTEL")
         or os.getenv("GROQ_MODEL_NAME")
+        or os.getenv("GROQ_MODEL_INTEL")
     )
     if configured_model:
         normalized = configured_model.strip().lower()
@@ -151,7 +152,7 @@ def run_chat_response(guide_context, user_query, model_name=None, temperature=No
     groq_api = os.getenv("GROQ_API_KEY")
     llm = ChatGroq(
         groq_api_key=groq_api,
-        model_name=get_intel_model(model_name or os.getenv("GROQ_MODEL_CHAT")),
+        model_name=get_intel_model(model_name),
         temperature=float(temperature or os.getenv('GROQ_TEMP_CHAT', '0.5')),
     )
 
