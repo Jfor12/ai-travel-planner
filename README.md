@@ -33,7 +33,7 @@ The frontend is a static single-page application hosted on GitHub Pages. The bac
 - Python, FastAPI, Uvicorn, Pydantic
 - LangChain, Groq, Tavily
 - PostgreSQL with `psycopg`
-- Vanilla JavaScript, HTML, CSS, Leaflet
+- Vanilla JavaScript (ES modules, no build step), HTML, CSS, Leaflet 1.9.4
 - Docker and Render
 - GitHub Pages
 
@@ -68,7 +68,21 @@ Optional settings:
 | `FORWARDED_IP_INDEX` | `1` | Otherwise, which `X-Forwarded-For` entry is the visitor, counting from the right |
 | `GEOCODER_URL` | Nominatim | Geocoding endpoint for map pins |
 
-The API is available at `http://localhost:8000`. Open `index.html` directly for the frontend, or serve the repository with a local static file server.
+The API is available at `http://localhost:8000`. Serve the repository with a static file server for the frontend (it uses ES modules, so opening `index.html` straight from disk won't work):
+
+```bash
+python -m http.server 3000   # then open http://localhost:3000
+```
+
+| Frontend file | What it does |
+|---|---|
+| `index.html` | The page |
+| `styles.css` | Styles, light and dark themes |
+| `app.js` | Talks to the API, renders briefings, the map and saved trips |
+| `markdown.js` | Turns guide Markdown into safe HTML (everything is escaped first) |
+| `fonts/` | Newsreader and IBM Plex Mono, self-hosted (SIL Open Font License) |
+
+Briefings have shareable links: `?destination=Paris&month=March` or `?trip=12`.
 
 ## Deployment
 
@@ -119,7 +133,9 @@ Guides generated before `guide_cache` existed are stored in `saved_itineraries`.
 
 ## Tests
 
-The tests run against a real PostgreSQL database. Use a throwaway one, never production:
+Frontend (Node 20+): `npm test` checks the Markdown renderer's escaping.
+
+Backend: the tests run against a real PostgreSQL database. Use a throwaway one, never production:
 
 ```bash
 pip install -r requirements-dev.txt
