@@ -52,14 +52,16 @@ def fake_ai(monkeypatch):
 
     def fake_generate(destination, month, *args, **kwargs):
         calls["generate"].append({"destination": destination, "month": month, "args": args, "kwargs": kwargs})
-        yield f"## Neighborhoods\n* **Old Town:** Generated guide for {destination} in {month}.\n\n"
-        yield "### COORDINATES\nOld Town | 41.9 | 12.5\n"
+        text = (f"## Neighborhoods\n* **Old Town:** Generated guide for {destination} in {month}.\n\n"
+                "(---PAGE BREAK---)\n\n### COORDINATES\nOld Town | 41.9 | 12.5\n")
+        return text, ["https://www.example.com/guide", "https://blog.example.org/food"]
 
     def fake_chat(guide_context, user_query, *args, **kwargs):
         calls["chat"].append({"guide": guide_context, "query": user_query, "args": args, "kwargs": kwargs})
         return "Answer from the guide."
 
-    monkeypatch.setattr(api, "generate_intel", fake_generate)
+    monkeypatch.setattr(api, "generate_guide", fake_generate)
+    monkeypatch.setattr(api, "verify_locations", lambda destination, locations: locations)  # no network in tests
     monkeypatch.setattr(api, "run_chat_response", fake_chat)
     return calls
 

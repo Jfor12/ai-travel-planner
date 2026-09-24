@@ -129,7 +129,7 @@ def test_pdf_text_is_capped(client):
 def test_internal_errors_are_not_sent_to_the_browser(client, monkeypatch):
     def boom(*a, **k):
         raise RuntimeError("password=hunter2 host=db.internal")
-    monkeypatch.setattr(api, "generate_intel", boom)
+    monkeypatch.setattr(api, "generate_guide", boom)
     r = client.post("/api/generate-intel", json={"destination": "Rome", "month": "May"})
     assert r.status_code == 500
     assert "hunter2" not in r.text and "db.internal" not in r.text

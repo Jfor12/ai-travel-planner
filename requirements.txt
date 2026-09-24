@@ -1,13 +1,12 @@
-psycopg[binary]
-python-dotenv
+# Pinned to the versions the tests run against. Upgrade deliberately.
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+pydantic==2.13.5
+psycopg[binary]==3.3.6
+python-dotenv==1.2.3
 langchain==0.2.14
 langchain-community==0.2.12
 langchain-core==0.2.33
 langchain-groq==0.1.9
-thefuzz
-tavily-python
-pandas
-fpdf
-fastapi
-uvicorn[standard]
-pydantic
+tavily-python==0.8.4
+fpdf2==2.8.8
