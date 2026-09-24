@@ -21,7 +21,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 # Import core modules
-from ai import generate_guide, run_chat_response
+from ai import generate_guide, get_intel_model, run_chat_response
 from geo import verify_locations
 from maps import compose_guide, create_pdf, extract_map_data
 from db import (
@@ -264,7 +264,15 @@ def request_info(request: Request):
         "client_host": request.client.host if request.client else None,
         "headers": {name: request.headers.get(name) for name in names if request.headers.get(name)},
         "rate_limit_key": client_ip(request),
+        "model": _model_in_use(),
     }
+
+
+def _model_in_use():
+    try:
+        return get_intel_model()
+    except Exception as error:
+        return f"unavailable: {type(error).__name__}"
 
 
 @app.post("/api/init-db", dependencies=[Depends(require_admin)])

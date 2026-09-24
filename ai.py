@@ -64,6 +64,16 @@ def get_intel_model(model_name=None):
     )
 
 
+def reasoning_options(model):
+    """gpt-oss models can think for longer before answering. Guides use "high"
+    (Groq's default is "medium"), which makes factual slips less likely;
+    GROQ_REASONING_EFFORT overrides it."""
+    effort = os.getenv("GROQ_REASONING_EFFORT", "high").strip().lower()
+    if model.startswith("openai/gpt-oss") and effort in ("low", "medium", "high"):
+        return {"reasoning_effort": effort}
+    return {}
+
+
 def research_queries(destination, month):
     """Three focused searches work better than one query covering six topics."""
     return [
@@ -97,8 +107,10 @@ GUIDE_PROMPT = ChatPromptTemplate.from_template("""
 You are an experienced local guide writing a short, practical briefing for a visitor.
 Be specific and direct. Prefer facts from the research notes; where they are silent,
 use well-established general knowledge and keep claims modest. Do not invent prices,
-opening hours or names of businesses. Write in English using the Latin alphabet:
-romanise local names (for example "Ramen", not the Japanese script).
+opening hours or names of businesses. Only say where places are relative to each
+other (north of, next to, a short walk from) when the research notes say so.
+Write in English using the Latin alphabet: romanise local names (for example
+"Ramen", not the Japanese script).
 
 RESEARCH NOTES:
 {context}
@@ -140,10 +152,12 @@ def generate_guide(destination, month):
     docs = research(destination, month)
     context = "\n".join(f"- {d['content']} (Source: {d['url']})" for d in docs) or "(no research results)"
 
+    model = get_intel_model()
     llm = ChatGroq(
         groq_api_key=groq_api,
-        model_name=get_intel_model(),
+        model_name=model,
         temperature=float(os.getenv('GROQ_TEMP_INTEL', '0.3')),
+        model_kwargs=reasoning_options(model),
     )
     chain = GUIDE_PROMPT | llm | StrOutputParser()
     text = chain.invoke({"context": context, "destination": destination, "month": month})
