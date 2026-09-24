@@ -129,6 +129,9 @@ select:focus-visible, .chat input:focus-visible { outline-offset: 0; }
 .guide li { padding: .6rem 0; border-bottom: 1px solid var(--rule); color: var(--ink-soft); }
 .guide li:last-child { border-bottom: 0; }
 .guide li strong:first-child { display: block; color: var(--ink); font-size: 1.1rem; font-weight: 500; }
+.guide li.sub { margin-left: 1.25rem; padding-left: .9rem; border-left: 2px solid var(--rule); border-bottom: 0; }
+.guide li.sub strong:first-child { font-size: 1rem; }
+.guide li:has(+ li.sub) { border-bottom: 0; }
 .guide p { margin: .75rem 0; color: var(--ink-soft); }
 .guide a { color: var(--ink); }
 /* Sources: small print */
