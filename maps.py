@@ -35,6 +35,16 @@ def extract_map_data(text):
     return points
 
 
+def guide_is_complete(text):
+    """True if a guide has real content: at least two sections (not counting
+    Sources) with at least two points between them. A model that runs out of
+    output budget returns nothing, or a fragment; neither should be shown or cached."""
+    sections = re.split(r"(?m)^##\s+", guide_body(text or ""))[1:]
+    real = [s for s in sections if not s.lower().startswith("sources")]
+    points = sum(len(re.findall(r"(?m)^\s*[*-]\s+\S", s)) for s in real)
+    return len(real) >= 2 and points >= 2
+
+
 def source_label(url):
     host = urlparse(url).netloc
     return host[4:] if host.startswith("www.") else host or url
