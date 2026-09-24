@@ -33,7 +33,8 @@ export function markdownToHtml(markdown, { headingOffset = 0 } = {}) {
         if (/^#{1,6}\s*coordinates\b/i.test(line)) break;
         const item = line.match(/^[*-]\s+(.*)$/);
         if (item) {
-            (list = list || []).push(`<li>${inline(item[1])}</li>`);
+            const nested = /^\s{2,}/.test(raw); // an indented bullet belongs to the item above
+            (list = list || []).push(`<li${nested ? ' class="sub"' : ''}>${inline(item[1])}</li>`);
             continue;
         }
         flush();

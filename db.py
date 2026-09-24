@@ -1,4 +1,5 @@
 import os
+import time
 
 import psycopg
 
@@ -41,7 +42,14 @@ def _connect():
         return None
     # Supabase needs TLS; a URL that sets its own sslmode (e.g. local tests) wins.
     options = {} if 'sslmode=' in db_url else {'sslmode': 'require'}
-    return psycopg.connect(db_url, connect_timeout=10, **options)
+    # Connecting through Supabase's pooler occasionally fails on the first try,
+    # so try once more. Only connecting is retried, never a query, so nothing
+    # can be written twice.
+    try:
+        return psycopg.connect(db_url, connect_timeout=10, **options)
+    except psycopg.OperationalError:
+        time.sleep(0.5)
+        return psycopg.connect(db_url, connect_timeout=10, **options)
 
 
 def get_connection():
