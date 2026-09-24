@@ -31,3 +31,8 @@ test('escapeHtml handles null and quotes', () => {
     assert.equal(escapeHtml(null), '');
     assert.equal(escapeHtml(`<a href='x'>"`), '&lt;a href=&#39;x&#39;&gt;&quot;');
 });
+
+test('indented bullets are marked as sub-points', () => {
+    const html = markdownToHtml('* **Safety:**\n  * **Pickpockets:** Front pockets.\n* **Tips:** Round up.');
+    assert.equal(html, '<ul><li><strong>Safety:</strong></li><li class="sub"><strong>Pickpockets:</strong> Front pockets.</li><li><strong>Tips:</strong> Round up.</li></ul>');
+});
