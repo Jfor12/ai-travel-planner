@@ -8,9 +8,11 @@ import logging
 import os
 import re
 import time
+import unicodedata
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from typing import Dict, Optional
+from urllib.parse import quote
 
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
@@ -19,8 +21,9 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 # Import core modules
-from ai import generate_intel, run_chat_response
-from maps import extract_map_data, create_pdf
+from ai import generate_guide, run_chat_response
+from geo import verify_locations
+from maps import compose_guide, create_pdf, extract_map_data
 from db import (
     cache_guide, ensure_schema, get_cached_guide, get_connection, get_history,
     get_itinerary_details, save_itinerary, update_itinerary, delete_itinerary,
@@ -90,6 +93,25 @@ def check_rate_limit(ip: str, storage=rate_limit_storage, limit=RATE_LIMIT, glob
 
 
 def client_ip(request: Request) -> str:
+    """The visitor's IP address, for rate limiting.
+
+    Behind Render's proxy, request.client is the proxy, not the visitor. Proxies
+    append to X-Forwarded-For, so entries on the right were added by
+    infrastructure and can't be forged by the visitor. FORWARDED_IP_INDEX picks
+    the entry counting from the right (default 1, the last one); CLIENT_IP_HEADER
+    names a header the proxy sets instead (e.g. cf-connecting-ip). Use
+    GET /api/admin/request-info to see what the deployment actually receives.
+    """
+    header = os.getenv("CLIENT_IP_HEADER", "").strip().lower()
+    if header and request.headers.get(header):
+        return request.headers[header].strip()
+    forwarded = [part.strip() for part in request.headers.get("x-forwarded-for", "").split(",") if part.strip()]
+    try:
+        index = max(1, int(os.getenv("FORWARDED_IP_INDEX", "1")))
+    except ValueError:
+        index = 1
+    if len(forwarded) >= index:
+        return forwarded[-index]
     return request.client.host if request.client else "unknown"
 
 
@@ -195,10 +217,7 @@ def _server_error(what: str) -> HTTPException:
 
 
 def _locations(text: str):
-    df = extract_map_data(text)
-    if df.empty:
-        return []
-    return [{"name": row["name"], "lat": float(row["lat"]), "lon": float(row["lon"])} for _, row in df.iterrows()]
+    return extract_map_data(text)
 
 
 def _require_database():
@@ -234,6 +253,18 @@ def health_check():
             conn.close()
 
     return status_info
+
+
+@app.get("/api/admin/request-info", dependencies=[Depends(require_admin)])
+def request_info(request: Request):
+    """Shows which address and proxy headers reach the API, to configure
+    CLIENT_IP_HEADER / FORWARDED_IP_INDEX (admin only)."""
+    names = ("x-forwarded-for", "x-real-ip", "true-client-ip", "cf-connecting-ip", "forwarded")
+    return {
+        "client_host": request.client.host if request.client else None,
+        "headers": {name: request.headers.get(name) for name in names if request.headers.get(name)},
+        "rate_limit_key": client_ip(request),
+    }
 
 
 @app.post("/api/init-db", dependencies=[Depends(require_admin)])
@@ -286,7 +317,10 @@ def generate_travel_intel(request: TravelRequest, http_request: Request):
         raise HTTPException(status_code=503, detail="Guide generation is not available right now")
 
     try:
-        full_intel = "".join(generate_intel(request.destination, request.month))
+        text, sources = generate_guide(request.destination, request.month)
+        # Pins come from OpenStreetMap, not from coordinates the model guessed.
+        locations = verify_locations(request.destination, extract_map_data(text))
+        full_intel = compose_guide(text, sources, locations)
     except Exception:
         raise _server_error("generate the guide")
 
@@ -366,11 +400,14 @@ def export_pdf(request: PdfRequest):
     except Exception:
         raise _server_error("create the PDF")
 
-    stem = re.sub(r"[^A-Za-z0-9_-]+", "_", f"{request.destination}_{request.month}").strip("_") or "travel_guide"
+    name = re.sub(r"[\\/:*?\"<>|\x00-\x1f]+", "", f"{request.destination} {request.month}").strip() or "Travel guide"
+    ascii_name = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    ascii_name = re.sub(r"[^A-Za-z0-9_-]+", "_", ascii_name).strip("_") or "travel_guide"
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{stem[:80]}.pdf"'},
+        # Plain ASCII for old browsers, plus the real name (RFC 6266) for the rest.
+        headers={"Content-Disposition": f"attachment; filename=\"{ascii_name[:80]}.pdf\"; filename*=UTF-8''{quote(name[:80] + '.pdf')}"},
     )
 
 

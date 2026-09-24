@@ -31,3 +31,12 @@ build/
 # Tests
 tests/
 .pytest_cache/
+
+# Frontend (served by GitHub Pages, not the API)
+index.html
+styles.css
+app.js
+markdown.js
+favicon.svg
+fonts/
+package.json
