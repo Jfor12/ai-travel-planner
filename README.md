@@ -63,6 +63,8 @@ Optional settings:
 | Variable | Default | What it does |
 |---|---|---|
 | `ADMIN_TOKEN` | unset (admin endpoints off) | Secret for the admin endpoints below |
+| `GROQ_MODEL_ID` | `openai/gpt-oss-120b` | Groq model; if it isn't available to your key, the strongest available gpt-oss model is used |
+| `GROQ_REASONING_EFFORT` | `high` | How long gpt-oss models think before writing a guide: `low`, `medium` or `high` |
 | `CACHE_MAX_AGE_DAYS` | `90` | Cached guides older than this are regenerated |
 | `CLIENT_IP_HEADER` | unset | A header your proxy sets to the visitor's IP (for example `cf-connecting-ip`), used for rate limits |
 | `FORWARDED_IP_INDEX` | `1` | Otherwise, which `X-Forwarded-For` entry is the visitor, counting from the right |

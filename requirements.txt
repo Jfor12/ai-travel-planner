@@ -8,5 +8,6 @@ langchain==0.2.14
 langchain-community==0.2.12
 langchain-core==0.2.33
 langchain-groq==0.1.9
+groq==0.37.1  # reasoning_effort needs a recent client
 tavily-python==0.8.4
 fpdf2==2.8.8
