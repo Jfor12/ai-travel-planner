@@ -83,10 +83,23 @@ def destination_key(destination):
 
 # --- Server-generated guide cache ----------------------------------------------------
 
+def cache_max_age_days():
+    try:
+        return max(1, int(os.getenv('CACHE_MAX_AGE_DAYS', '90')))
+    except ValueError:
+        return 90
+
+
 def get_cached_guide(destination, month):
+    """The cached guide, unless it's older than CACHE_MAX_AGE_DAYS (default 90):
+    scams, transport and restaurants change, so old guides are regenerated."""
     row = _run(
-        "SELECT guide_text FROM guide_cache WHERE destination_key = %s AND month = %s",
-        (destination_key(destination), month), fetch='one')
+        """
+        SELECT guide_text FROM guide_cache
+        WHERE destination_key = %s AND month = %s
+          AND created_at > CURRENT_TIMESTAMP - make_interval(days => %s)
+        """,
+        (destination_key(destination), month, cache_max_age_days()), fetch='one')
     return row[0] if row else None
 
 

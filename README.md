@@ -20,12 +20,12 @@ The frontend is a static single-page application hosted on GitHub Pages. The bac
 ## Features
 
 - Destination and month-specific travel guides
-- Tavily research combined with Groq responses
+- Three focused Tavily searches combined with Groq responses, with the sources listed in each guide
 - Cached guides to reduce repeated API usage (only the server writes to the cache)
 - Rate limits: five new guides and 20 questions per hour per IP, plus overall hourly caps
-- Interactive Leaflet maps from extracted coordinates
+- Interactive Leaflet maps, with places checked against OpenStreetMap (Nominatim)
 - Shared saved itineraries backed by PostgreSQL
-- PDF export
+- PDF export with full Unicode text
 - Follow-up questions about a generated guide
 
 ## Technology
@@ -57,6 +57,16 @@ TAVILY_API_KEY=your_tavily_api_key
 # Optional: use one exact model ID returned by Groq's /models endpoint.
 GROQ_MODEL_ID=your_available_groq_model_id
 ```
+
+Optional settings:
+
+| Variable | Default | What it does |
+|---|---|---|
+| `ADMIN_TOKEN` | unset (admin endpoints off) | Secret for the admin endpoints below |
+| `CACHE_MAX_AGE_DAYS` | `90` | Cached guides older than this are regenerated |
+| `CLIENT_IP_HEADER` | unset | A header your proxy sets to the visitor's IP (for example `cf-connecting-ip`), used for rate limits |
+| `FORWARDED_IP_INDEX` | `1` | Otherwise, which `X-Forwarded-For` entry is the visitor, counting from the right |
+| `GEOCODER_URL` | Nominatim | Geocoding endpoint for map pins |
 
 The API is available at `http://localhost:8000`. Open `index.html` directly for the frontend, or serve the repository with a local static file server.
 
@@ -99,6 +109,8 @@ Admin endpoints need the `X-Admin-Token` header to match the `ADMIN_TOKEN` envir
 curl -X DELETE -H "X-Admin-Token: $ADMIN_TOKEN" https://ai-travel-planner-api-9d5f.onrender.com/api/itinerary/42
 ```
 
+On Render, check which address the rate limits see by calling `GET /api/admin/request-info` with the admin token. If `rate_limit_key` is the same for different visitors, set `CLIENT_IP_HEADER` or `FORWARDED_IP_INDEX` to match the headers it shows.
+
 The API creates any missing tables when it starts. `python init_db.py` does the same by hand.
 
 ### Moving guides from the old cache
@@ -110,7 +122,7 @@ Guides generated before `guide_cache` existed are stored in `saved_itineraries`.
 The tests run against a real PostgreSQL database. Use a throwaway one, never production:
 
 ```bash
-pip install pytest httpx
+pip install -r requirements-dev.txt
 TEST_DATABASE_URL=postgresql://postgres@localhost:5432/postgres?sslmode=disable pytest
 ```
 
