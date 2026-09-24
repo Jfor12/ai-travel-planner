@@ -1,0 +1,200 @@
+/* AI Travel Planner — a researched briefing, set like a page of field notes.
+   Shares its paper, ink and tomato palette and its type with jacopofornesi.co.uk. */
+
+@font-face { font-family: "Newsreader"; src: url("fonts/newsreader-latin-wght-normal.woff2") format("woff2"); font-weight: 200 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "Newsreader"; src: url("fonts/newsreader-latin-wght-italic.woff2") format("woff2"); font-weight: 200 800; font-style: italic; font-display: swap; }
+@font-face { font-family: "Plex Mono"; src: url("fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+
+:root {
+  --paper: #f3eee4;
+  --paper-deep: #e9e2d4;
+  --card: #faf7f0;
+  --ink: #1d1b17;
+  --ink-soft: #45413a;
+  --muted: #6a6459;
+  --rule: #d5ccbb;
+  --rule-strong: #1d1b17;
+  --accent: #b23a17;
+  --accent-soft: #f1d9cd;
+  --error-bg: #f6e3dc;
+  --error-ink: #8a2410;
+
+  --serif: "Newsreader", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --mono: "Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --gutter: clamp(1rem, 4vw, 2.5rem);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #161412; --paper-deep: #201d1a; --card: #1c1a17; --ink: #ece5d8; --ink-soft: #cbc3b4; --muted: #a0988a;
+    --rule: #37322c; --rule-strong: #ece5d8; --accent: #f08a62; --accent-soft: #4a2a1e; --error-bg: #3a211a; --error-ink: #f4b39b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #161412; --paper-deep: #201d1a; --card: #1c1a17; --ink: #ece5d8; --ink-soft: #cbc3b4; --muted: #a0988a;
+  --rule: #37322c; --rule-strong: #ece5d8; --accent: #f08a62; --accent-soft: #4a2a1e; --error-bg: #3a211a; --error-ink: #f4b39b;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 1.0625rem/1.6 var(--serif);
+  font-feature-settings: "kern", "liga", "onum";
+  border-top: 3px solid var(--accent);
+  overflow-wrap: break-word;
+}
+::selection { background: var(--accent); color: var(--paper); }
+h1, h2, h3, h4 { margin: 0; font-weight: 450; line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+p { margin: 0; }
+a { color: inherit; text-decoration-thickness: 1px; text-decoration-color: var(--rule); text-underline-offset: .22em; }
+a:hover { color: var(--accent); text-decoration-color: currentColor; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+button, input, select { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+.vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.skip { position: absolute; left: var(--gutter); top: -4rem; z-index: 1000; padding: .5rem .75rem; background: var(--ink); color: var(--paper); font: .8125rem var(--mono); }
+.skip:focus { top: .75rem; color: var(--paper); }
+.wrap { width: min(100% - 2 * var(--gutter), 76rem); margin-inline: auto; }
+main:focus { outline: none; }
+
+/* Mono for anything that behaves like data or UI chrome. */
+.top, .ask label, .fine, .status, .kicker, .result__meta, .button, .linkish, .hint,
+.places, .trips__date, .foot, .guide .sources {
+  font-family: var(--mono);
+  font-feature-settings: normal;
+  letter-spacing: 0;
+}
+
+/* Header ------------------------------------------------------------------ */
+.top__inner { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: .5rem 1.5rem; padding-block: 1.1rem; border-bottom: 1px solid var(--rule); font-size: .875rem; }
+.top__home { font-family: var(--serif); font-size: 1.125rem; font-weight: 500; text-decoration: none; }
+.top__nav { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem 1.5rem; color: var(--ink-soft); }
+.top__nav a { text-decoration: none; }
+.linkish { padding: .25rem 0; border: 0; background: none; color: var(--ink-soft); font-size: .875rem; text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: .22em; cursor: pointer; }
+.linkish:hover, .linkish[aria-pressed="true"] { color: var(--accent); text-decoration-color: currentColor; }
+
+.intro { padding-block: clamp(2rem, 6vw, 3.5rem) clamp(1.5rem, 4vw, 2rem); }
+.intro h1 { font-size: clamp(2.1rem, 1.6rem + 2.2vw, 3.1rem); font-weight: 400; letter-spacing: -.02em; }
+.intro__lede { max-width: 38rem; margin-top: .9rem; font-size: clamp(1.15rem, 1.05rem + .4vw, 1.3rem); line-height: 1.5; color: var(--ink-soft); }
+
+/* The question: city, month, go ----------------------------------------------- */
+.ask { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem 1.25rem; padding-block: 1.25rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule); }
+.ask__field { display: grid; gap: .35rem; flex: 1 1 12rem; max-width: 20rem; }
+.ask label { color: var(--muted); font-size: .8125rem; }
+select, .chat input {
+  width: 100%; min-height: 2.75rem; padding: .5rem .75rem; border: 1px solid var(--rule-strong); border-radius: 0; background: var(--card);
+  font-size: 1.05rem;
+}
+select { appearance: none; padding-right: 2.25rem; background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%); background-position: calc(100% - 1.1rem) 55%, calc(100% - .8rem) 55%; background-size: .3rem .3rem; background-repeat: no-repeat; }
+select:focus-visible, .chat input:focus-visible { outline-offset: 0; }
+.ask__saved { margin-left: auto; align-self: center; }
+.fine { max-width: 48rem; margin-top: .75rem; color: var(--muted); font-size: .75rem; line-height: 1.5; }
+
+.button { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: .55rem 1.1rem; border: 1px solid var(--ink); background: var(--ink); color: var(--paper); font-size: .8125rem; text-decoration: none; cursor: pointer; }
+.button:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.button--quiet { background: transparent; color: var(--ink); }
+.button--quiet:hover:not(:disabled) { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.button:disabled { opacity: .5; cursor: progress; }
+
+.status { min-height: 1.5rem; margin-top: 1.25rem; color: var(--ink-soft); font-size: .8125rem; }
+.status--error { padding: .7rem .9rem; background: var(--error-bg); color: var(--error-ink); border-left: 3px solid currentColor; }
+.status--busy::before { content: ""; display: inline-block; width: .6rem; height: .6rem; margin-right: .6rem; border-radius: 50%; background: var(--accent); animation: pulse 1.2s ease-in-out infinite; vertical-align: .05em; }
+@keyframes pulse { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .status--busy::before { animation: none; } }
+
+/* The briefing ----------------------------------------------------------------- */
+.result, .saved { padding-bottom: clamp(2.5rem, 6vw, 4rem); outline: none; }
+.result__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem 2rem; padding-block: 1.5rem 1rem; border-bottom: 1px solid var(--rule-strong); }
+.kicker { color: var(--accent); font-size: .8125rem; }
+.result h2, .saved h2 { margin-top: .3rem; font-size: clamp(1.9rem, 1.5rem + 1.6vw, 2.6rem); font-weight: 400; letter-spacing: -.02em; }
+.result__meta { margin-top: .4rem; color: var(--muted); font-size: .8125rem; }
+.actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+.result__body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem clamp(2rem, 5vw, 4rem); padding-top: 1.5rem; }
+@media (min-width: 60rem) {
+  .result__body { grid-template-columns: minmax(0, 1fr) minmax(0, 24rem); }
+  .where { position: sticky; top: 1.5rem; align-self: start; }
+}
+
+.guide { max-width: 40rem; }
+.guide h3 { margin: 2rem 0 .5rem; padding-bottom: .4rem; border-bottom: 1px solid var(--rule); font-size: 1.45rem; }
+.guide h3:first-child { margin-top: 0; }
+.guide ul { margin: 0; padding: 0; list-style: none; }
+.guide li { padding: .6rem 0; border-bottom: 1px solid var(--rule); color: var(--ink-soft); }
+.guide li:last-child { border-bottom: 0; }
+.guide li strong:first-child { display: block; color: var(--ink); font-size: 1.1rem; font-weight: 500; }
+.guide p { margin: .75rem 0; color: var(--ink-soft); }
+.guide a { color: var(--ink); }
+/* Sources: small print */
+.guide h3.sources { font-size: .8125rem; color: var(--muted); }
+.guide ul.sources li { padding: .25rem 0; border: 0; font-size: .8125rem; }
+
+.map { height: 18rem; border: 1px solid var(--rule-strong); background: var(--paper-deep); }
+@media (min-width: 60rem) { .map { height: 22rem; } }
+.map--empty { display: grid; place-items: center; padding: 1rem; color: var(--muted); font: .8125rem var(--mono); text-align: center; }
+.places { margin: .75rem 0 0; padding: 0; list-style: none; font-size: .875rem; }
+.places li { border-bottom: 1px solid var(--rule); }
+.places button { display: flex; gap: .75rem; width: 100%; padding: .55rem 0; border: 0; background: none; text-align: left; cursor: pointer; }
+.places button:hover { color: var(--accent); }
+.places .n { flex: none; width: 1.5rem; height: 1.5rem; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: var(--paper); font-size: .75rem; }
+.hint { margin-top: .6rem; color: var(--muted); font-size: .75rem; }
+
+/* Numbered map pins in the accent colour */
+.pin { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--accent); border: 2px solid var(--paper); box-shadow: 0 1px 3px rgb(0 0 0 / .35); }
+.pin span { transform: rotate(45deg); color: var(--paper); font: 12px/1 var(--mono); }
+.leaflet-container { font: .875rem var(--serif); }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--card); color: var(--ink); border-radius: 0; }
+
+/* Questions -------------------------------------------------------------------- */
+.chat { max-width: 40rem; margin-top: 2.5rem; padding-top: 1.25rem; border-top: 1px solid var(--rule-strong); }
+.chat h3 { font-size: 1.45rem; }
+.chat__form { display: flex; gap: .5rem; margin-top: .9rem; }
+.chat__form input { flex: 1; min-width: 0; }
+.chat__answer { margin-top: 1rem; color: var(--ink-soft); }
+.chat__answer > * + * { margin-top: .6rem; }
+.chat__answer ul { padding-left: 1.2rem; }
+
+/* Saved trips -------------------------------------------------------------------- */
+.trips { margin: 0; padding: 0; list-style: none; }
+.trips li { border-bottom: 1px solid var(--rule); }
+.trips button { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: .25rem 1rem; width: 100%; padding: .9rem 0; border: 0; background: none; text-align: left; cursor: pointer; }
+.trips button:hover .trips__name { color: var(--accent); }
+.trips__name { font-size: 1.2rem; }
+.trips__date { color: var(--muted); font-size: .8125rem; }
+.trips__empty { padding: 1rem 0; color: var(--muted); }
+
+/* Footer ----------------------------------------------------------------------------- */
+.foot { color: var(--muted); font-size: .8125rem; }
+.foot__inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .75rem 2rem; padding-block: 1.5rem 2.5rem; border-top: 1px solid var(--rule-strong); }
+.foot ul { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; margin: 0; padding: 0; list-style: none; }
+.foot a { color: var(--ink-soft); }
+
+@media (max-width: 40rem) {
+  .ask__field { max-width: none; }
+  .ask .button { flex: 1 1 100%; }
+  .ask__saved { margin-left: 0; }
+}
+
+@media print {
+  body { border: 0; background: #fff; color: #000; }
+  .top, .ask, .fine, .status, .actions, .chat, .foot, .skip, .saved { display: none !important; }
+  .result__body { display: block; }
+  .map { height: 16rem; break-inside: avoid; }
+}
+
+@media (forced-colors: active) {
+  .pin, .places .n { forced-color-adjust: none; }
+}
+
+/* Leaflet controls in the site's colours (and readable in dark mode) */
+.leaflet-bar a, .leaflet-bar a:hover { background: var(--card); color: var(--ink); border-bottom-color: var(--rule); }
+.leaflet-bar { border: 1px solid var(--rule-strong) !important; border-radius: 0 !important; box-shadow: none !important; }
+.leaflet-bar a:first-child, .leaflet-bar a:last-child { border-radius: 0; }
+.leaflet-container .leaflet-control-attribution { background: color-mix(in srgb, var(--card) 85%, transparent); color: var(--muted); }
+.leaflet-control-attribution a { color: var(--ink-soft); }
