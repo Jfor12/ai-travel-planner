@@ -64,74 +64,90 @@ def get_intel_model(model_name=None):
     )
 
 
-def generate_intel(destination, month, model_name=None, temperature=None):
-    groq_api = os.getenv("GROQ_API_KEY")
-    tavily_api = os.getenv("TAVILY_API_KEY")
+def research_queries(destination, month):
+    """Three focused searches work better than one query covering six topics."""
+    return [
+        f"{destination} local dishes to try and best neighbourhoods for food",
+        f"{destination} tipping etiquette, getting around by public transport and common tourist scams",
+        f"{destination} weather, what to pack and crowds in {month}",
+    ]
 
-    if not groq_api or not tavily_api:
+
+def research(destination, month, max_results=3):
+    """Returns ([{'url', 'content'}], ...) deduplicated by URL. A failed search
+    is skipped rather than failing the whole guide."""
+    tavily = TavilySearchResults(max_results=max_results)
+    seen, docs = set(), []
+    for query in research_queries(destination, month):
+        try:
+            results = tavily.invoke(query)
+        except Exception:
+            continue
+        if not isinstance(results, list):  # the tool returns an error string on failure
+            continue
+        for doc in results:
+            url = doc.get("url") if isinstance(doc, dict) else None
+            if url and url not in seen and doc.get("content"):
+                seen.add(url)
+                docs.append({"url": url, "content": doc["content"]})
+    return docs
+
+
+GUIDE_PROMPT = ChatPromptTemplate.from_template("""
+You are an experienced local guide writing a short, practical briefing for a visitor.
+Be specific and direct. Prefer facts from the research notes; where they are silent,
+use well-established general knowledge and keep claims modest. Do not invent prices,
+opening hours or names of businesses. Write in English using the Latin alphabet:
+romanise local names (for example "Ramen", not the Japanese script).
+
+RESEARCH NOTES:
+{context}
+
+DESTINATION: {destination}
+MONTH OF TRAVEL: {month}
+
+Write Markdown in exactly this format:
+
+## Gastronomy (What to order)
+* **[Dish]:** [What it is and where it's typical].
+
+## Neighborhoods
+* **[Area]:** [What it's like and who it suits].
+
+## Logistics
+* **Tips:** [Tipping and etiquette].
+* **Transport:** [Best way to get around].
+* **Safety:** [Common scams and how to avoid them].
+
+## Seasonal ({month})
+* **Weather:** [Typical temperatures and rain].
+* **Crowds:** [High, medium or low, and why].
+
+(---PAGE BREAK---)
+
+### COORDINATES
+List 3-4 of the neighbourhoods or places named above, one per line, exactly as: Name | Latitude | Longitude
+""")
+
+
+def generate_guide(destination, month):
+    """Research and write a guide. Returns (markdown, sources) where sources
+    are the URLs the research actually used."""
+    groq_api = os.getenv("GROQ_API_KEY")
+    if not groq_api or not os.getenv("TAVILY_API_KEY"):
         raise RuntimeError("Missing API keys for generation")
 
-    search_query = f"""
-    cultural etiquette and tipping rules {destination}
-    must eat local dishes food guide {destination} not restaurants
-    neighborhood guide {destination} vibe check
-    weather and packing tips {destination} in {month}
-    common tourist scams {destination}
-    coordinates of major neighborhoods {destination}
-    """
-    tavily = TavilySearchResults(max_results=3)
-    search_docs = tavily.invoke(search_query)
-    search_context = "\n".join([f"- {d['content']} (Source: {d['url']})" for d in search_docs])
+    docs = research(destination, month)
+    context = "\n".join(f"- {d['content']} (Source: {d['url']})" for d in docs) or "(no research results)"
 
     llm = ChatGroq(
         groq_api_key=groq_api,
-        model_name=get_intel_model(model_name),
-        temperature=float(temperature or os.getenv('GROQ_TEMP_INTEL', '0.3')),
+        model_name=get_intel_model(),
+        temperature=float(os.getenv('GROQ_TEMP_INTEL', '0.3')),
     )
-
-    prompt = ChatPromptTemplate.from_template("""
-    You are a cynical, expert local guide. Provide "Ground Truth" intelligence.
-    
-    CONTEXT:
-    {context}
-    
-    REQUEST:
-    Destination: {destination}
-    Month: {month}
-    
-    STRICT RULES:
-    1. FOOD & NEIGHBORHOODS: Must come from Context or static knowledge.
-    2. WEATHER: If Context missing, use INTERNAL KNOWLEDGE for averages.
-    3. NO FLUFF.
-    
-    FORMAT (Markdown):
-    
-    ## Gastronomy (What to order)
-    * **[Dish]:** [Desc].
-    
-    ## Neighborhoods
-    * **[Area]:** [Vibe].
-    
-    ## Logistics
-    * **Tips:** [Rule].
-    * **Transport:** [Best method].
-    * **Safety:** [Scams].
-    
-    ## Seasonal ({month})
-    * **Weather:** [Avg Temp/Rain].
-    * **Crowds:** [High/Low].
-
-    (---PAGE BREAK---)
-    
-    ### COORDINATES
-    List 3-4 major locations or districts mentioned above in this exact format: Name | Latitude | Longitude
-    Example:
-    Eiffel Tower Sector | 48.8584 | 2.2945
-    Le Marais | 48.8566 | 2.3522
-    """)
-
-    chain = prompt | llm | StrOutputParser()
-    return chain.stream({"context": search_context, "destination": destination, "month": month})
+    chain = GUIDE_PROMPT | llm | StrOutputParser()
+    text = chain.invoke({"context": context, "destination": destination, "month": month})
+    return text, [d["url"] for d in docs]
 
 
 def run_chat_response(guide_context, user_query, model_name=None, temperature=None):
