@@ -53,6 +53,7 @@ def fake_ai(monkeypatch):
     def fake_generate(destination, month, *args, **kwargs):
         calls["generate"].append({"destination": destination, "month": month, "args": args, "kwargs": kwargs})
         text = (f"## Neighborhoods\n* **Old Town:** Generated guide for {destination} in {month}.\n\n"
+                "## Logistics\n* **Transport:** Walk or take the tram.\n\n"
                 "(---PAGE BREAK---)\n\n### COORDINATES\nOld Town | 41.9 | 12.5\n")
         return text, ["https://www.example.com/guide", "https://blog.example.org/food"]
 

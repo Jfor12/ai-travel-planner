@@ -104,9 +104,11 @@ def test_old_cached_guides_are_regenerated(client, fake_ai):
 
 
 def test_recent_cached_guides_are_used(client, fake_ai):
-    sql("INSERT INTO guide_cache (destination_key, month, guide_text, created_at) VALUES ('rome', 'May', 'fresh guide', %s)",
-        (datetime.now() - timedelta(days=10),))
-    assert client.post("/api/generate-intel", json={"destination": "Rome", "month": "May"}).json()["intel"] == "fresh guide"
+    fresh = "## Food\n* **Supplì:** Fried rice balls.\n\n## Weather\n* **May:** Warm, 20–26°C."
+    sql("INSERT INTO guide_cache (destination_key, month, guide_text, created_at) VALUES ('rome', 'May', %s, %s)",
+        (fresh, datetime.now() - timedelta(days=10)))
+    assert client.post("/api/generate-intel", json={"destination": "Rome", "month": "May"}).json()["intel"] == fresh
+    assert fake_ai["generate"] == []
 
 
 # --- Client IP for rate limits ---------------------------------------------------------------------------
@@ -207,19 +209,25 @@ def test_display_title():
 
 # --- Model settings -------------------------------------------------------------------------------------
 
+GOOD_GUIDE = "## Gastronomy\n* **Pintxos:** Small bites.\n\n## Logistics\n* **Transport:** Metro."
+
+
 @pytest.fixture
 def fake_groq(monkeypatch):
-    """A local stand-in for Groq's API that records what the app sends."""
+    """A local stand-in for Groq's API. It records what the app sends, and
+    `replies` maps a reasoning effort to (content, finish_reason)."""
     import threading
     from http.server import BaseHTTPRequestHandler, HTTPServer
-    seen = []
+    seen, replies = [], {}
 
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self):
-            seen.append(json.loads(self.rfile.read(int(self.headers["Content-Length"]))))
+            request = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            seen.append(request)
+            content, finish = replies.get(request.get("reasoning_effort"), (GOOD_GUIDE, "stop"))
             body = json.dumps({
-                "id": "x", "object": "chat.completion", "created": 0, "model": seen[-1]["model"],
-                "choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": "## Neighborhoods\n* **Monti:** Village feel."}}],
+                "id": "x", "object": "chat.completion", "created": 0, "model": request["model"],
+                "choices": [{"index": 0, "finish_reason": finish, "message": {"role": "assistant", "content": content}}],
                 "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
             }).encode()
             self.send_response(200)
@@ -234,30 +242,98 @@ def fake_groq(monkeypatch):
     server = HTTPServer(("127.0.0.1", 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     monkeypatch.setenv("GROQ_API_BASE", f"http://127.0.0.1:{server.server_port}")
+    monkeypatch.delenv("GROQ_REASONING_EFFORT", raising=False)
     monkeypatch.setattr(ai, "research", lambda d, m: [{"url": "https://example.com", "content": "Monti is next to the Forum."}])
     monkeypatch.setattr(ai, "get_available_models", lambda: {"openai/gpt-oss-120b", "openai/gpt-oss-20b"})
-    yield seen
+    yield type("FakeGroq", (), {"seen": seen, "replies": replies})
     server.shutdown()
     server.server_close()
 
 
-def test_guides_ask_for_high_reasoning_on_the_strongest_model(fake_groq, monkeypatch):
+def test_guides_use_medium_reasoning_on_the_strongest_model(fake_groq, monkeypatch):
     monkeypatch.delenv("GROQ_MODEL_ID", raising=False)
     text, sources = ai.generate_guide("Rome", "September")
-    request = fake_groq[-1]
+    request = fake_groq.seen[-1]
     assert request["model"] == "openai/gpt-oss-120b"
-    assert request["reasoning_effort"] == "high"
+    assert request["reasoning_effort"] == "medium"
     assert "Only say where places are relative to each" in request["messages"][0]["content"]
-    assert text.startswith("## Neighborhoods") and sources == ["https://example.com"]
+    assert text == GOOD_GUIDE and sources == ["https://example.com"]
+    assert len(fake_groq.seen) == 1
+
+
+def test_an_empty_answer_is_retried_with_low_reasoning(fake_groq):
+    # What happened live: reasoning used the whole budget, content came back empty.
+    fake_groq.replies["medium"] = ("", "length")
+    text, _ = ai.generate_guide("Barcelona", "September")
+    assert [r["reasoning_effort"] for r in fake_groq.seen] == ["medium", "low"]
+    assert text == GOOD_GUIDE
+
+
+def test_a_cut_off_or_hollow_answer_is_retried(fake_groq):
+    fake_groq.replies["medium"] = ("## Gastronomy\n* **Pintxos:** Small", "length")
+    ai.generate_guide("Barcelona", "September")
+    fake_groq.replies["medium"] = ("Sorry, I can't help with that.", "stop")
+    ai.generate_guide("Barcelona", "October")
+    assert [r["reasoning_effort"] for r in fake_groq.seen] == ["medium", "low", "medium", "low"]
+
+
+def test_if_every_attempt_is_empty_generation_fails_instead_of_returning_nothing(fake_groq):
+    fake_groq.replies["medium"] = ("", "length")
+    fake_groq.replies["low"] = ("", "length")
+    with pytest.raises(RuntimeError, match="empty or incomplete"):
+        ai.generate_guide("Barcelona", "September")
 
 
 def test_reasoning_effort_can_be_changed_and_is_only_sent_to_gpt_oss(fake_groq, monkeypatch):
-    monkeypatch.setenv("GROQ_REASONING_EFFORT", "medium")
+    monkeypatch.setenv("GROQ_REASONING_EFFORT", "high")
     ai.generate_guide("Rome", "May")
-    assert fake_groq[-1]["reasoning_effort"] == "medium"
+    assert fake_groq.seen[-1]["reasoning_effort"] == "high"
     assert ai.reasoning_options("qwen/qwen3.6-27b") == {}
     monkeypatch.setenv("GROQ_REASONING_EFFORT", "extreme")
-    assert ai.reasoning_options("openai/gpt-oss-120b") == {}
+    assert ai.reasoning_options("openai/gpt-oss-120b") == {"reasoning_effort": "medium"}
+
+
+def test_chat_leaves_room_for_the_answer_and_never_returns_blank(fake_groq):
+    assert ai.run_chat_response(GOOD_GUIDE, "Where to eat?") == GOOD_GUIDE
+    request = fake_groq.seen[-1]
+    assert request["reasoning_effort"] == "low" and request["max_tokens"] == 2000
+    fake_groq.replies["low"] = ("", "length")
+    assert ai.run_chat_response(GOOD_GUIDE, "Where to eat?").startswith("Sorry, I couldn't")
+
+
+# --- Empty guides are never cached or served -----------------------------------------------------------
+
+BARCELONA_AS_SEEN_LIVE = "\n\n## Sources\n* [devourtours.com](https://devourtours.com/blog/where-to-eat-in-barcelona)"
+
+
+def test_guide_is_complete():
+    assert maps.guide_is_complete(GOOD_GUIDE)
+    assert not maps.guide_is_complete(BARCELONA_AS_SEEN_LIVE)
+    assert not maps.guide_is_complete("")
+    assert not maps.guide_is_complete(None)
+    assert not maps.guide_is_complete("## Gastronomy\n* **Pintxos:** Small bites.")  # one section only
+
+
+def test_an_empty_cached_guide_is_rewritten(client, fake_ai):
+    sql("INSERT INTO guide_cache (destination_key, month, guide_text) VALUES ('barcelona', 'September', %s)", (BARCELONA_AS_SEEN_LIVE,))
+    data = client.post("/api/generate-intel", json={"destination": "Barcelona", "month": "September"}).json()
+    assert data["cached"] is False and "Generated guide for Barcelona" in data["intel"]
+    assert "Generated guide" in sql("SELECT guide_text FROM guide_cache")[0][0]
+
+
+def test_an_empty_guide_is_not_cached_or_saved(client, fake_ai, monkeypatch):
+    monkeypatch.setattr(api, "generate_guide", lambda d, m: ("", ["https://example.com"]))
+    client.post("/api/generate-intel", json={"destination": "Barcelona", "month": "May"})
+    assert sql("SELECT count(*) FROM guide_cache")[0][0] == 0
+    assert client.post("/api/save-itinerary", json={"destination": "Barcelona", "month": "May"}).status_code == 404
+
+
+def test_generation_failure_is_a_clear_error_not_a_blank_guide(client, monkeypatch):
+    def empty(d, m):
+        raise RuntimeError("The model returned an empty or incomplete guide")
+    monkeypatch.setattr(api, "generate_guide", empty)
+    r = client.post("/api/generate-intel", json={"destination": "Barcelona", "month": "June"})
+    assert r.status_code == 500 and "generate the guide" in r.json()["detail"]
 
 
 def test_a_retired_model_setting_falls_back_to_the_strongest(monkeypatch):

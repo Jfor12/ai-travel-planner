@@ -8,6 +8,8 @@ from langchain_community.tools import TavilySearchResults
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
+from maps import guide_is_complete
+
 
 PREFERRED_MODELS = (
     "openai/gpt-oss-120b",
@@ -64,13 +66,21 @@ def get_intel_model(model_name=None):
     )
 
 
-def reasoning_options(model):
-    """gpt-oss models can think for longer before answering. Guides use "high"
-    (Groq's default is "medium"), which makes factual slips less likely;
-    GROQ_REASONING_EFFORT overrides it."""
-    effort = os.getenv("GROQ_REASONING_EFFORT", "high").strip().lower()
-    if model.startswith("openai/gpt-oss") and effort in ("low", "medium", "high"):
-        return {"reasoning_effort": effort}
+def is_reasoning_model(model):
+    return model.startswith("openai/gpt-oss")
+
+
+def guide_effort():
+    """Reasoning effort for guides: GROQ_REASONING_EFFORT, default "medium" (Groq's default).
+    gpt-oss spends its output budget on hidden reasoning first; on "high" it can
+    run out before writing anything, so "medium" is the safe default."""
+    effort = os.getenv("GROQ_REASONING_EFFORT", "medium").strip().lower()
+    return effort if effort in ("low", "medium", "high") else "medium"
+
+
+def reasoning_options(model, effort=None):
+    if is_reasoning_model(model):
+        return {"reasoning_effort": effort or guide_effort()}
     return {}
 
 
@@ -153,24 +163,35 @@ def generate_guide(destination, month):
     context = "\n".join(f"- {d['content']} (Source: {d['url']})" for d in docs) or "(no research results)"
 
     model = get_intel_model()
-    llm = ChatGroq(
-        groq_api_key=groq_api,
-        model_name=model,
-        temperature=float(os.getenv('GROQ_TEMP_INTEL', '0.3')),
-        model_kwargs=reasoning_options(model),
-    )
-    chain = GUIDE_PROMPT | llm | StrOutputParser()
-    text = chain.invoke({"context": context, "destination": destination, "month": month})
-    return text, [d["url"] for d in docs]
+    # If the model runs out of budget while reasoning it returns an empty or
+    # cut-off answer (finish_reason "length"). Try once more with low effort,
+    # which leaves nearly all of the budget for the guide itself.
+    efforts = [guide_effort(), "low"] if is_reasoning_model(model) else [None]
+    for effort in dict.fromkeys(efforts):
+        llm = ChatGroq(
+            groq_api_key=groq_api,
+            model_name=model,
+            temperature=float(os.getenv('GROQ_TEMP_INTEL', '0.3')),
+            model_kwargs=reasoning_options(model, effort),
+        )
+        message = (GUIDE_PROMPT | llm).invoke({"context": context, "destination": destination, "month": month})
+        text = message.content or ""
+        if message.response_metadata.get("finish_reason") != "length" and guide_is_complete(text):
+            return text, [d["url"] for d in docs]
+    raise RuntimeError("The model returned an empty or incomplete guide")
 
 
 def run_chat_response(guide_context, user_query, model_name=None, temperature=None):
     groq_api = os.getenv("GROQ_API_KEY")
+    model = get_intel_model(model_name)
     llm = ChatGroq(
         groq_api_key=groq_api,
-        model_name=get_intel_model(model_name),
+        model_name=model,
         temperature=float(temperature or os.getenv('GROQ_TEMP_CHAT', '0.5')),
-        max_tokens=600,  # answers should be short; this also caps the cost of one question
+        # Hidden reasoning counts towards this cap, so it's generous and reasoning
+        # is kept low: short answers need little of it.
+        max_tokens=2000,
+        model_kwargs=reasoning_options(model, "low"),
     )
 
     prompt = ChatPromptTemplate.from_template("""
@@ -187,7 +208,7 @@ def run_chat_response(guide_context, user_query, model_name=None, temperature=No
 
     chain = prompt | llm | StrOutputParser()
     response = chain.invoke({"guide_context": guide_context, "user_query": user_query})
-    return response
+    return response.strip() or "Sorry, I couldn't come up with an answer to that. Please try asking another way."
 
 
 def run_gen_response(guide_context, user_query, model_name=None, temperature=None):
