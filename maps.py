@@ -51,14 +51,26 @@ def compose_guide(body, sources=(), locations=()):
     return text
 
 
-def _plain(line, keep_bold=False):
-    """Markdown inline formatting for the PDF: [label](url) -> label (url), *italic* -> italic,
-    and **bold** kept for fpdf2's own markdown (or removed)."""
-    line = re.sub(r"\[([^\]]+)\]\((https?://[^)\s]+)\)", r"\1 (\2)", line)
+MONTHS = ("January", "February", "March", "April", "May", "June", "July",
+          "August", "September", "October", "November", "December")
+
+
+def display_title(destination):
+    """Saved trips are stored as "Rome [May]"; show them as "Rome in May"."""
+    match = re.match(r"^(.*) \[(\w+)\]$", destination.strip())
+    return f"{match.group(1)} in {match.group(2)}" if match and match.group(2) in MONTHS else destination.strip()
+
+
+def _inline(line, markdown=True):
+    """Markdown inline formatting for fpdf2. With markdown=True, **bold** and
+    [label](https://...) links are kept for fpdf2 to render (links stay clickable
+    and only the label is printed); otherwise they become plain text."""
     line = line.replace("--", "–").replace("__", "_")  # fpdf2 reads these as underline/italic markers
-    if not keep_bold:
+    line = re.sub(r"(?<![\w*])\*(?!\*)(\S.*?)(?<!\*)\*(?![\w*])", r"\1", line)  # *italic* -> plain
+    if not markdown:
+        line = re.sub(r"\[([^\]]+)\]\((https?://[^)\s]+)\)", r"\1", line)
         line = re.sub(r"\*\*(.+?)\*\*", r"\1", line)
-    return re.sub(r"(?<![\w*])\*(?!\*)(\S.*?)(?<!\*)\*(?![\w*])", r"\1", line)
+    return line
 
 
 def create_pdf(destination, content):
@@ -75,7 +87,7 @@ def create_pdf(destination, content):
     pdf.set_margins(18, 18, 18)
     pdf.add_page()
     pdf.set_font(font, "B", 18)
-    pdf.multi_cell(0, 10, clean(f"Travel guide: {destination}"), new_x="LMARGIN", new_y="NEXT")
+    pdf.multi_cell(0, 10, clean(display_title(destination)), align="L", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(4)
 
     for raw in guide_body(content).split("\n"):
@@ -87,10 +99,12 @@ def create_pdf(destination, content):
         if heading:
             pdf.ln(3)
             pdf.set_font(font, "B", 13)
-            pdf.multi_cell(0, 8, clean(_plain(heading.group(1))), new_x="LMARGIN", new_y="NEXT")
+            pdf.multi_cell(0, 8, clean(_inline(heading.group(1), markdown=False)), align="L", new_x="LMARGIN", new_y="NEXT")
             continue
         pdf.set_font(font, "", 11)
         item = re.match(r"^[*-]\s+(.*)$", line)
-        text = f"•  {_plain(item.group(1), keep_bold=True)}" if item else _plain(line, keep_bold=True)
-        pdf.multi_cell(0, 6.5, clean(text), new_x="LMARGIN", new_y="NEXT", markdown=True)
+        indent = 6 if item and len(raw) - len(raw.lstrip()) >= 2 else 0  # nested bullet
+        text = f"{'–' if indent else '•'}  {_inline(item.group(1))}" if item else _inline(line)
+        pdf.set_x(pdf.l_margin + indent)
+        pdf.multi_cell(0, 6.5, clean(text), align="L", new_x="LMARGIN", new_y="NEXT", markdown=True)
     return bytes(pdf.output())

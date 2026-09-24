@@ -161,3 +161,44 @@ def test_pdf_keeps_non_latin_characters(client):
     assert r.status_code == 200 and r.content[:4] == b"%PDF"
     assert b"DejaVu" in r.content, "a Unicode font is embedded"
     assert r.headers["content-disposition"] == "attachment; filename=\"odz_May.pdf\"; filename*=UTF-8''%C5%81%C3%B3d%C5%BA%20May.pdf"
+
+
+# --- Database connection retry and PDF layout -----------------------------------------------------
+
+def test_a_failed_connection_is_retried_once(client, fake_ai, monkeypatch):
+    import psycopg
+    import db
+    real_connect, failures = psycopg.connect, []
+
+    def flaky(*args, **kwargs):
+        if not failures:
+            failures.append(1)
+            raise psycopg.OperationalError("server closed the connection unexpectedly")
+        return real_connect(*args, **kwargs)
+
+    monkeypatch.setattr(db.psycopg, "connect", flaky)
+    monkeypatch.setattr(db.time, "sleep", lambda s: None)
+    client.post("/api/generate-intel", json={"destination": "Rome", "month": "May"})
+    failures.clear()
+    r = client.post("/api/save-itinerary", json={"destination": "Rome", "month": "May"})
+    assert r.status_code == 200 and failures == [1]
+    assert sql("SELECT count(*) FROM saved_itineraries")[0][0] == 1
+
+
+def test_pdf_title_links_and_nesting():
+    import pymupdf
+    pdf = maps.create_pdf("Rome [September]", "## Logistics\n* **Safety:**\n  * **Pickpockets:** Front pockets.\n\n## Sources\n"
+                                               "* [worldnomads.com](https://www.worldnomads.com/travel-safety/europe/italy/common-scams-in-italy)")
+    page = pymupdf.open(stream=pdf, filetype="pdf")[0]
+    text = page.get_text()
+    assert text.startswith("Rome in September")
+    assert "worldnomads.com\n" in text and "travel-safety" not in text, "sources print the site name, not the URL"
+    assert [link["uri"] for link in page.get_links()] == ["https://www.worldnomads.com/travel-safety/europe/italy/common-scams-in-italy"]
+    safety, pick = (next(b for b in page.get_text("blocks") if word in b[4]) for word in ("Safety", "Pickpockets"))
+    assert pick[0] > safety[0] + 10, "nested point is indented"
+
+
+def test_display_title():
+    assert maps.display_title("Rome [September]") == "Rome in September"
+    assert maps.display_title("Rome [Smarch]") == "Rome [Smarch]"
+    assert maps.display_title("Paris") == "Paris"

@@ -25,14 +25,19 @@ let markers = [];
 // --- Talking to the API --------------------------------------------------------------
 
 async function api(path, options = {}) {
-    const response = await fetch(`${API_URL}${path}`, {
-        ...options,
-        headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
-    });
+    let response;
+    try {
+        response = await fetch(`${API_URL}${path}`, {
+            ...options,
+            headers: options.body ? { 'Content-Type': 'application/json' } : undefined,
+        });
+    } catch {
+        throw new Error('Couldn’t reach the server. Check your connection and try again.');
+    }
     if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         const message = typeof body.detail === 'string' ? body.detail
-            : response.status === 422 ? 'Please choose a destination and month from the lists.'
+            : response.status === 422 ? 'The server couldn’t accept that request. Reload the page and try again.'
             : 'Something went wrong. Please try again.';
         throw Object.assign(new Error(message), { status: response.status });
     }
@@ -172,14 +177,17 @@ $('#ask-form').addEventListener('submit', event => {
 // --- Save, PDF, questions ---------------------------------------------------------------------------
 
 $('#save').addEventListener('click', async () => {
+    // Feedback goes on the button itself, which is where the visitor is looking.
     const button = $('#save');
     button.disabled = true;
+    button.textContent = 'Saving…';
     try {
         await api('/api/save-itinerary', { method: 'POST', body: JSON.stringify({ destination: current.destination, month: current.month }) });
-        button.textContent = 'Saved';
+        button.textContent = 'Saved to trips';
         setStatus(`Saved ${current.destination} in ${current.month} to the shared trips.`);
     } catch (error) {
         button.disabled = false;
+        button.textContent = 'Couldn’t save. Try again';
         setStatus(error.message, 'error');
     }
 });
