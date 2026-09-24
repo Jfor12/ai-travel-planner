@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timedelta
 
 import pytest
@@ -202,3 +203,70 @@ def test_display_title():
     assert maps.display_title("Rome [September]") == "Rome in September"
     assert maps.display_title("Rome [Smarch]") == "Rome [Smarch]"
     assert maps.display_title("Paris") == "Paris"
+
+
+# --- Model settings -------------------------------------------------------------------------------------
+
+@pytest.fixture
+def fake_groq(monkeypatch):
+    """A local stand-in for Groq's API that records what the app sends."""
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    seen = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            seen.append(json.loads(self.rfile.read(int(self.headers["Content-Length"]))))
+            body = json.dumps({
+                "id": "x", "object": "chat.completion", "created": 0, "model": seen[-1]["model"],
+                "choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": "## Neighborhoods\n* **Monti:** Village feel."}}],
+                "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+            }).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    monkeypatch.setenv("GROQ_API_BASE", f"http://127.0.0.1:{server.server_port}")
+    monkeypatch.setattr(ai, "research", lambda d, m: [{"url": "https://example.com", "content": "Monti is next to the Forum."}])
+    monkeypatch.setattr(ai, "get_available_models", lambda: {"openai/gpt-oss-120b", "openai/gpt-oss-20b"})
+    yield seen
+    server.shutdown()
+    server.server_close()
+
+
+def test_guides_ask_for_high_reasoning_on_the_strongest_model(fake_groq, monkeypatch):
+    monkeypatch.delenv("GROQ_MODEL_ID", raising=False)
+    text, sources = ai.generate_guide("Rome", "September")
+    request = fake_groq[-1]
+    assert request["model"] == "openai/gpt-oss-120b"
+    assert request["reasoning_effort"] == "high"
+    assert "Only say where places are relative to each" in request["messages"][0]["content"]
+    assert text.startswith("## Neighborhoods") and sources == ["https://example.com"]
+
+
+def test_reasoning_effort_can_be_changed_and_is_only_sent_to_gpt_oss(fake_groq, monkeypatch):
+    monkeypatch.setenv("GROQ_REASONING_EFFORT", "medium")
+    ai.generate_guide("Rome", "May")
+    assert fake_groq[-1]["reasoning_effort"] == "medium"
+    assert ai.reasoning_options("qwen/qwen3.6-27b") == {}
+    monkeypatch.setenv("GROQ_REASONING_EFFORT", "extreme")
+    assert ai.reasoning_options("openai/gpt-oss-120b") == {}
+
+
+def test_a_retired_model_setting_falls_back_to_the_strongest(monkeypatch):
+    monkeypatch.setattr(ai, "get_available_models", lambda: {"openai/gpt-oss-120b", "openai/gpt-oss-20b"})
+    monkeypatch.setenv("GROQ_MODEL_ID", "moonshotai/kimi-k2-instruct-0905")
+    assert ai.get_intel_model() == "openai/gpt-oss-120b"
+
+
+def test_admin_can_see_which_model_is_used(client, monkeypatch):
+    monkeypatch.setattr(api, "get_intel_model", lambda: "openai/gpt-oss-120b")
+    info = client.get("/api/admin/request-info", headers={"X-Admin-Token": ADMIN_TOKEN}).json()
+    assert info["model"] == "openai/gpt-oss-120b"
