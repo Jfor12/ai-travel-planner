@@ -27,3 +27,7 @@ build/
 
 # Local cache / runtime
 .cache/
+
+# Tests
+tests/
+.pytest_cache/

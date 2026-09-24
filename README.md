@@ -21,8 +21,8 @@ The frontend is a static single-page application hosted on GitHub Pages. The bac
 
 - Destination and month-specific travel guides
 - Tavily research combined with Groq responses
-- Cached guides to reduce repeated API usage
-- IP-based limit of five new guide generations per hour
+- Cached guides to reduce repeated API usage (only the server writes to the cache)
+- Rate limits: five new guides and 20 questions per hour per IP, plus overall hourly caps
 - Interactive Leaflet maps from extracted coordinates
 - Shared saved itineraries backed by PostgreSQL
 - PDF export
@@ -68,7 +68,7 @@ The repository includes [render.yaml](render.yaml), which defines the free Docke
 
 1. Create a Blueprint and connect the GitHub repository.
 2. Select the `main` branch.
-3. Enter `DATABASE_URL`, `GROQ_API_KEY`, and `TAVILY_API_KEY` as secret environment variables.
+3. Enter `DATABASE_URL`, `GROQ_API_KEY`, and `TAVILY_API_KEY` as secret environment variables. Optionally add `ADMIN_TOKEN` (a long random string) to enable the admin endpoints below.
 4. Optionally set the single model setting, `GROQ_MODEL_ID`, to an exact model ID available to your Groq key. Remove any older model variables such as `GROQ_MODEL_NAME`, `GROQ_MODEL_INTEL`, or `GROQ_MODEL_CHAT`.
 5. Apply the Blueprint and wait for the Docker deployment to finish.
 
@@ -80,17 +80,39 @@ The production API URL is configured in `index.html`. Push changes to `main` and
 
 ## API
 
-- `GET /health`
-- `POST /api/generate-intel`
-- `POST /api/chat`
-- `POST /api/save-itinerary`
-- `POST /api/export-pdf`
-- `GET /api/itineraries`
-- `GET /api/itinerary/{trip_id}`
-- `PUT /api/itinerary/{trip_id}`
-- `DELETE /api/itinerary/{trip_id}`
+| Endpoint | Body | Notes |
+|---|---|---|
+| `GET /health` | | |
+| `POST /api/generate-intel` | `destination`, `month` | Served from the cache when possible; otherwise rate limited |
+| `POST /api/chat` | `user_query` (max 500 chars) and either `trip_id` or `destination` + `month` | The guide is loaded on the server, never sent by the client |
+| `POST /api/save-itinerary` | `destination`, `month` | Saves the server-generated guide to the shared trips |
+| `POST /api/export-pdf` | `destination`, `month`, `guide_text` | |
+| `GET /api/itineraries` | | Most recent 200 |
+| `GET /api/itinerary/{trip_id}` | | |
+| `PUT /api/itinerary/{trip_id}` | `guide_text` | Admin only |
+| `DELETE /api/itinerary/{trip_id}` | | Admin only |
+| `POST /api/init-db` | | Admin only |
 
-Run `python init_db.py` once with `DATABASE_URL` configured, or call `POST /api/init-db`, to create the required tables.
+Admin endpoints need the `X-Admin-Token` header to match the `ADMIN_TOKEN` environment variable, and are disabled when it isn't set. For example:
+
+```bash
+curl -X DELETE -H "X-Admin-Token: $ADMIN_TOKEN" https://ai-travel-planner-api-9d5f.onrender.com/api/itinerary/42
+```
+
+The API creates any missing tables when it starts. `python init_db.py` does the same by hand.
+
+### Moving guides from the old cache
+
+Guides generated before `guide_cache` existed are stored in `saved_itineraries`. To reuse them instead of generating them again, run [scripts/import_old_cache.sql](scripts/import_old_cache.sql) in the Supabase SQL editor. It copies only rows that look clean (no HTML) and takes the oldest version of each guide.
+
+## Tests
+
+The tests run against a real PostgreSQL database. Use a throwaway one, never production:
+
+```bash
+pip install pytest httpx
+TEST_DATABASE_URL=postgresql://postgres@localhost:5432/postgres?sslmode=disable pytest
+```
 
 ## Notes
 
