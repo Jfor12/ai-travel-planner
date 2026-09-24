@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 # Import core modules
 from ai import generate_guide, get_intel_model, run_chat_response
 from geo import verify_locations
-from maps import compose_guide, create_pdf, extract_map_data
+from maps import compose_guide, create_pdf, extract_map_data, guide_is_complete
 from db import (
     cache_guide, ensure_schema, get_cached_guide, get_connection, get_history,
     get_itinerary_details, save_itinerary, update_itinerary, delete_itinerary,
@@ -310,6 +310,9 @@ def generate_travel_intel(request: TravelRequest, http_request: Request):
         except Exception:
             log.exception("Cache lookup failed")
             cached = None
+        if cached and not guide_is_complete(cached):
+            log.warning("Ignoring an empty cached guide for %s / %s", request.destination, request.month)
+            cached = None
         if cached:
             return {"destination": request.destination, "month": request.month,
                     "intel": cached, "locations": _locations(cached), "cached": True}
@@ -332,7 +335,7 @@ def generate_travel_intel(request: TravelRequest, http_request: Request):
     except Exception:
         raise _server_error("generate the guide")
 
-    if has_db:
+    if has_db and guide_is_complete(full_intel):
         try:
             cache_guide(request.destination, request.month, full_intel)
         except Exception:
@@ -388,7 +391,7 @@ def save_guide(request: SaveRequest):
     _require_database()
     try:
         guide = get_cached_guide(request.destination, request.month)
-        if not guide:
+        if not guide or not guide_is_complete(guide):
             raise HTTPException(status_code=404, detail="Generate this guide before saving it")
         trip_id = save_itinerary(request.destination, request.month, guide)
     except HTTPException:
