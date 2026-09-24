@@ -140,6 +140,7 @@ def run_chat_response(guide_context, user_query, model_name=None, temperature=No
         groq_api_key=groq_api,
         model_name=get_intel_model(model_name),
         temperature=float(temperature or os.getenv('GROQ_TEMP_CHAT', '0.5')),
+        max_tokens=600,  # answers should be short; this also caps the cost of one question
     )
 
     prompt = ChatPromptTemplate.from_template("""
