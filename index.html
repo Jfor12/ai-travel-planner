@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🌍 AI Travel Planner</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin=""></script>
     <style>
         :root {
             --bg-primary: #0a0e27;
@@ -823,11 +823,10 @@
                 });
 
                 if (!response.ok) {
-                    const error = await response.json();
                     if (response.status === 429) {
                         throw new Error('Rate limit reached! You can generate 5 new guides per hour. Try viewing saved trips or wait a bit.');
                     }
-                    throw new Error(error.detail || 'Failed to generate guide');
+                    throw await errorFrom(response, 'Failed to generate guide');
                 }
 
                 const data = await response.json();
@@ -856,40 +855,55 @@
             `;
         }
 
+        // Everything that came from the API is escaped before it reaches the page.
+        const escapeHtml = value => String(value ?? '')
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+        // The guide currently on screen.
+        let current = null;
+
+        async function errorFrom(response, fallback) {
+            const body = await response.json().catch(() => ({}));
+            return new Error(typeof body.detail === 'string' ? body.detail : fallback);
+        }
+
         function displayResults(data) {
-            const mapHtml = `<div id="map"></div>`;
-            const intelHtml = `
+            renderGuide({ destination: data.destination, month: data.month, text: data.intel, locations: data.locations || [] });
+        }
+
+        function renderGuide({ destination, month, text, locations, tripId = null }) {
+            current = { destination, month, text, locations, tripId, map: null };
+            const title = month ? `${destination} - ${month}` : destination;
+            contentArea.innerHTML = `
+                <div id="map"></div>
                 <div>
                     <div class="intel-section">
-                        <h2>${data.destination} - ${data.month}</h2>
+                        ${tripId ? '<div style="margin-bottom: 20px;"><button type="button" data-action="back" style="margin-bottom: 10px;">Back to My Trips</button></div>' : ''}
+                        <h2>${escapeHtml(title)}</h2>
                         <div class="intel-content">
-                            ${markdownToHtml(data.intel)}
+                            ${markdownToHtml(text)}
                         </div>
-                        ${data.locations.length > 0 ? `
+                        ${locations.length > 0 ? `
                             <div class="location-list">
-                                <h3>📍 Locations (${data.locations.length})</h3>
-                                ${data.locations.map((loc, i) => `
-                                    <div class="location-item" onclick="focusLocation(${loc.lat}, ${loc.lon})">
-                                        <div class="name">${loc.name}</div>
-                                        <div class="coords">${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)}</div>
+                                <h3>📍 Locations (${locations.length})</h3>
+                                ${locations.map((loc, i) => `
+                                    <div class="location-item" data-location="${i}" role="button" tabindex="0">
+                                        <div class="name">${escapeHtml(loc.name)}</div>
+                                        <div class="coords">${Number(loc.lat).toFixed(4)}, ${Number(loc.lon).toFixed(4)}</div>
                                     </div>
                                 `).join('')}
                             </div>
                         ` : ''}
                         <div class="button-group">
-                            <button onclick="saveGuide('${data.destination}', '${data.month}', \`${data.intel.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">💾 Save Guide</button>
-                            <button onclick="exportPDF('${data.destination}', '${data.month}', \`${data.intel.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">📄 Export PDF</button>
+                            ${tripId ? '' : '<button type="button" data-action="save">💾 Save Guide</button>'}
+                            <button type="button" data-action="pdf">📄 Export PDF</button>
                         </div>
                         <div class="chat-section">
                             <h3>💬 Ask a Question</h3>
                             <div class="chat-group">
-                                <input 
-                                    type="text" 
-                                    id="chatInput" 
-                                    placeholder="Ask about the guide..."
-                                    data-guide="${encodeURIComponent(data.intel)}"
-                                >
-                                <button onclick="sendChat(this)">Ask</button>
+                                <input type="text" id="chatInput" maxlength="500" placeholder="Ask about the guide..." aria-label="Ask a question about this guide">
+                                <button type="button" data-action="ask">Ask</button>
                             </div>
                             <div id="chatResponse"></div>
                         </div>
@@ -897,11 +911,9 @@
                 </div>
             `;
 
-            contentArea.innerHTML = mapHtml + intelHtml;
-
             setTimeout(() => {
-                if (data.locations.length > 0) {
-                    initializeMap(data.locations);
+                if (locations.length > 0) {
+                    initializeMap(locations);
                 } else {
                     document.getElementById('map').innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">No locations found in the guide</p>';
                 }
@@ -920,32 +932,26 @@
                 maxZoom: 19
             }).addTo(map);
 
-            locations.forEach(loc => {
-                const marker = L.marker([loc.lat, loc.lon])
-                    .bindPopup(`<b>${loc.name}</b><br>${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)}`)
-                    .addTo(map);
-            });
+            const markers = locations.map(loc => L.marker([loc.lat, loc.lon])
+                .bindPopup(`<b>${escapeHtml(loc.name)}</b><br>${Number(loc.lat).toFixed(4)}, ${Number(loc.lon).toFixed(4)}`)
+                .addTo(map));
 
             if (locations.length > 1) {
-                const group = new L.featureGroup(
-                    locations.map(loc => L.marker([loc.lat, loc.lon]))
-                );
-                map.fitBounds(group.getBounds().pad(0.1));
+                map.fitBounds(L.featureGroup(markers).getBounds().pad(0.1));
             }
+            if (current) Object.assign(current, { map, markers });
         }
 
-        function focusLocation(lat, lon) {
-            const mapElement = document.getElementById('map');
-            if (mapElement && mapElement._leaflet_map) {
-                mapElement._leaflet_map.setView([lat, lon], 15);
-            }
+        function focusLocation(index) {
+            if (!current || !current.map) return;
+            const loc = current.locations[index];
+            current.map.setView([loc.lat, loc.lon], 15);
+            current.markers[index].openPopup();
         }
 
         async function sendChat(button) {
             const chatInput = document.getElementById('chatInput');
             const question = chatInput.value.trim();
-            const encodedGuide = chatInput.dataset.guide;
-            const guideText = decodeURIComponent(encodedGuide);
 
             if (!question) {
                 showAlert('Please enter a question', 'error');
@@ -956,33 +962,33 @@
             const responseDiv = document.getElementById('chatResponse');
             responseDiv.innerHTML = '<div class="loading" style="padding: 20px;"><div class="spinner" style="margin: 0 auto 10px;"></div>Thinking...</div>';
 
+            // The server looks the guide up itself; only the question is sent.
+            const which = current.tripId
+                ? { trip_id: current.tripId }
+                : { destination: current.destination, month: current.month };
+
             try {
                 const response = await fetch(`${API_URL}/api/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        guide_text: guideText,
-                        user_query: question
-                    })
+                    body: JSON.stringify({ ...which, user_query: question })
                 });
 
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Failed to get response');
-                }
+                if (!response.ok) throw await errorFrom(response, 'Failed to get response');
 
                 const data = await response.json();
-                responseDiv.innerHTML = `<div class="chat-response">${data.response}</div>`;
+                responseDiv.innerHTML = `<div class="chat-response">${markdownToHtml(data.response)}</div>`;
                 chatInput.value = '';
 
             } catch (error) {
-                responseDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+                responseDiv.innerHTML = `<div class="error">Error: ${escapeHtml(error.message)}</div>`;
             } finally {
                 button.disabled = false;
             }
         }
 
-        async function saveGuide(destination, month, guideText) {
+        async function saveGuide() {
+            const { destination, month } = current;
             if (!confirm(`Save this guide for ${destination}?\n\nThis will be visible to all users in the shared database.`)) {
                 return;
             }
@@ -991,19 +997,11 @@
                 const response = await fetch(`${API_URL}/api/save-itinerary`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        destination: destination,
-                        month: month,
-                        guide_text: guideText
-                    })
+                    body: JSON.stringify({ destination, month })
                 });
 
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Failed to save guide');
-                }
+                if (!response.ok) throw await errorFrom(response, 'Failed to save guide');
 
-                const data = await response.json();
                 showAlert('Guide saved successfully!', 'success');
 
             } catch (error) {
@@ -1012,33 +1010,31 @@
             }
         }
 
-        async function exportPDF(destination, month, guideText) {
+        async function exportPDF() {
+            const { destination, month, text } = current;
             try {
                 const response = await fetch(`${API_URL}/api/export-pdf`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         destination: destination,
-                        month: month,
-                        guide_text: guideText
+                        month: month || '',
+                        guide_text: text
                     })
                 });
 
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Failed to export PDF');
-                }
+                if (!response.ok) throw await errorFrom(response, 'Failed to export PDF');
 
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `${destination.replace(/\s+/g, '_')}_${month}.pdf`;
+                a.download = `${`${destination}_${month || ''}`.replace(/[^A-Za-z0-9_-]+/g, '_').replace(/^_+|_+$/g, '') || 'travel_guide'}.pdf`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
-                
+
                 showAlert('PDF downloaded successfully!', 'success');
 
             } catch (error) {
@@ -1047,27 +1043,33 @@
             }
         }
 
+        // A small Markdown renderer: text is escaped first, then **bold**,
+        // *italic*, headings and "* " lists are turned into HTML.
         function markdownToHtml(markdown) {
-            let html = markdown
-                .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
-                .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
-                .replace(/^# (.*?)$/gm, '<h1>$1</h1>')
-                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                .replace(/__(.*?)__/g, '<strong>$1</strong>')
-                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                .replace(/_(.*?)_/g, '<em>$1</em>')
-                .replace(/\n\n/g, '</p><p>')
-                .replace(/\n/g, '<br>')
-                .replace(/^\* (.*?)$/gm, '<li>$1</li>')
-                .replace(/^\- (.*?)$/gm, '<li>$1</li>')
-                .replace(/(<li>.*?<\/li>)/s, '<ul>$1</ul>')
-                .replace(/\(---PAGE BREAK---\)[^\n]*/gi, '')
-                .replace(/---PAGE BREAK---[^\n]*/gi, '')
-                .replace(/\(---page break---\)[^\n]*/gi, '')
-                .replace(/COORDINATES[\s\S]*?(?=##|###|$)/gi, '')
-                .replace(/List \d+-\d+ major locations[\s\S]*?(?=##|###|$)/gi, '');
-
-            return `<p>${html}</p>`.replace(/<p><\/p>/g, '');
+            const body = String(markdown ?? '').split(/\(?-{3}\s*page break\s*-{3}\)?/i)[0];
+            const inline = text => escapeHtml(text)
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/__(.+?)__/g, '<strong>$1</strong>')
+                .replace(/(^|[^*\w])\*(?!\s)([^*]+?)\*(?!\*)/g, '$1<em>$2</em>');
+            const out = [];
+            let list = null;
+            for (const raw of body.split('\n')) {
+                const line = raw.trim();
+                if (/^#{1,6}\s*coordinates\b/i.test(line)) break; // map data, not for reading
+                const item = line.match(/^[*-]\s+(.*)$/);
+                if (item) {
+                    (list = list || []).push(`<li>${inline(item[1])}</li>`);
+                    continue;
+                }
+                if (list) { out.push(`<ul>${list.join('')}</ul>`); list = null; }
+                if (!line) continue;
+                const heading = line.match(/^(#{1,3})\s+(.*)$/);
+                out.push(heading
+                    ? `<h${heading[1].length}>${inline(heading[2])}</h${heading[1].length}>`
+                    : `<p>${inline(line)}</p>`);
+            }
+            if (list) out.push(`<ul>${list.join('')}</ul>`);
+            return out.join('');
         }
 
         function showAlert(message, type) {
@@ -1086,14 +1088,15 @@
 
         async function showMyTrips() {
             clearAlerts();
+            current = null;
             contentArea.innerHTML = '<div class="loading" style="grid-column: 1 / -1;"><div class="spinner"></div><p>Loading your trips...</p></div>';
 
             try {
                 const response = await fetch(`${API_URL}/api/itineraries`);
-                if (!response.ok) throw new Error('Failed to load trips');
+                if (!response.ok) throw await errorFrom(response, 'Failed to load trips');
 
                 const data = await response.json();
-                
+
                 if (data.trips.length === 0) {
                     contentArea.innerHTML = `
                         <div class="initial-state" style="grid-column: 1 / -1;">
@@ -1105,26 +1108,24 @@
                     return;
                 }
 
-                const tripsHtml = `
+                contentArea.innerHTML = `
                     <div style="grid-column: 1 / -1; padding: 20px;">
                         <h2>📚 My Saved Trips</h2>
                         <div style="display: grid; gap: 15px; margin-top: 20px;">
                             ${data.trips.map(trip => `
                                 <div class="location-item" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                                    <div onclick="viewTrip(${trip.id})" style="flex: 1; cursor: pointer; min-width: 200px;">
-                                        <div class="name">${trip.destination}</div>
-                                        <div class="coords">${new Date(trip.created_at).toLocaleDateString()}</div>
+                                    <div style="flex: 1; min-width: 200px;">
+                                        <div class="name">${escapeHtml(trip.destination)}</div>
+                                        <div class="coords">${escapeHtml(new Date(trip.created_at).toLocaleDateString())}</div>
                                     </div>
                                     <div class="button-group" style="margin: 0;">
-                                        <button onclick="event.stopPropagation(); viewTrip(${trip.id})" style="padding: 10px 20px;">👁️ View</button>
-                                        <button onclick="event.stopPropagation(); deleteTrip(${trip.id})" style="padding: 10px 20px; background: linear-gradient(135deg, #ef4444, #dc2626);">🗑️ Delete</button>
+                                        <button type="button" data-action="view" data-trip="${Number(trip.id)}" style="padding: 10px 20px;">👁️ View</button>
                                     </div>
                                 </div>
                             `).join('')}
                         </div>
                     </div>
                 `;
-                contentArea.innerHTML = tripsHtml;
 
             } catch (error) {
                 console.error('Error loading trips:', error);
@@ -1137,62 +1138,11 @@
             contentArea.innerHTML = '<div class="loading" style="grid-column: 1 / -1;"><div class="spinner"></div><p>Loading trip details...</p></div>';
 
             try {
-                const response = await fetch(`${API_URL}/api/itinerary/${tripId}`);
-                if (!response.ok) throw new Error('Failed to load trip');
+                const response = await fetch(`${API_URL}/api/itinerary/${Number(tripId)}`);
+                if (!response.ok) throw await errorFrom(response, 'Failed to load trip');
 
                 const data = await response.json();
-                
-                const mapHtml = `<div id="map"></div>`;
-                const intelHtml = `
-                    <div>
-                        <div class="intel-section">
-                            <div style="margin-bottom: 20px;">
-                                <button onclick="showMyTrips()" style="margin-bottom: 10px;">Back to My Trips</button>
-                                <h2>${data.destination}</h2>
-                            </div>
-                            <div class="intel-content">
-                                ${markdownToHtml(data.guide_text)}
-                            </div>
-                            ${data.locations && data.locations.length > 0 ? `
-                                <div class="location-list">
-                                    <h3>📍 Locations (${data.locations.length})</h3>
-                                    ${data.locations.map((loc, i) => `
-                                        <div class="location-item" onclick="focusLocation(${loc.lat}, ${loc.lon})">
-                                            <div class="name">${loc.name}</div>
-                                            <div class="coords">${loc.lat.toFixed(4)}, ${loc.lon.toFixed(4)}</div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            ` : ''}
-                            <div class="button-group">
-                                <button onclick="exportPDF('${data.destination}', '', \`${data.guide_text.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">📄 Export PDF</button>
-                            </div>
-                            <div class="chat-section">
-                                <h3>💬 Ask a Question</h3>
-                                <div class="chat-group">
-                                    <input 
-                                        type="text" 
-                                        id="chatInput" 
-                                        placeholder="Ask about the guide..."
-                                        data-guide="${encodeURIComponent(data.guide_text)}"
-                                    >
-                                    <button onclick="sendChat(this)">Ask</button>
-                                </div>
-                                <div id="chatResponse"></div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                contentArea.innerHTML = mapHtml + intelHtml;
-
-                setTimeout(() => {
-                    if (data.locations && data.locations.length > 0) {
-                        initializeMap(data.locations);
-                    } else {
-                        document.getElementById('map').innerHTML = '<p style="padding: 20px; text-align: center; color: var(--text-secondary);">No locations found in the guide</p>';
-                    }
-                }, 0);
+                renderGuide({ destination: data.destination, month: '', text: data.guide_text, locations: data.locations || [], tripId: Number(tripId) });
 
             } catch (error) {
                 console.error('Error viewing trip:', error);
@@ -1200,26 +1150,27 @@
             }
         }
 
-        async function deleteTrip(tripId) {
-            if (!confirm('Are you sure you want to delete this trip?\n\nThis action cannot be undone!')) {
-                return;
+        // One listener for every button in the results area (no inline handlers).
+        contentArea.addEventListener('click', event => {
+            const place = event.target.closest('[data-location]');
+            if (place) return focusLocation(Number(place.dataset.location));
+            const button = event.target.closest('[data-action]');
+            if (!button) return;
+            const action = button.dataset.action;
+            if (action === 'save') saveGuide();
+            else if (action === 'pdf') exportPDF();
+            else if (action === 'ask') sendChat(button);
+            else if (action === 'back') showMyTrips();
+            else if (action === 'view') viewTrip(button.dataset.trip);
+        });
+        contentArea.addEventListener('keydown', event => {
+            if (event.target.id === 'chatInput' && event.key === 'Enter') {
+                contentArea.querySelector('[data-action="ask"]').click();
+            } else if (event.target.matches('[data-location]') && (event.key === 'Enter' || event.key === ' ')) {
+                event.preventDefault();
+                focusLocation(Number(event.target.dataset.location));
             }
-
-            try {
-                const response = await fetch(`${API_URL}/api/itinerary/${tripId}`, {
-                    method: 'DELETE'
-                });
-
-                if (!response.ok) throw new Error('Failed to delete trip');
-
-                showAlert('Trip deleted successfully!', 'success');
-                showMyTrips();
-
-            } catch (error) {
-                console.error('Error deleting trip:', error);
-                showAlert(`Error deleting trip: ${error.message}`, 'error');
-            }
-        }
+        });
 
         // Check API availability on load
         window.addEventListener('load', async () => {
