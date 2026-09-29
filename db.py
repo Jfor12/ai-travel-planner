@@ -50,6 +50,10 @@ SCHEMA = [
             EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl);
             IF api_roles IS NOT NULL THEN
                 EXECUTE format('REVOKE ALL ON TABLE %I FROM %s', tbl, api_roles);
+                -- Says so explicitly (and satisfies Supabase's advisor): a
+                -- restrictive policy can't be widened by any policy added later.
+                EXECUTE format('DROP POLICY IF EXISTS "No public access" ON %I', tbl);
+                EXECUTE format('CREATE POLICY "No public access" ON %I AS RESTRICTIVE FOR ALL TO %s USING (false) WITH CHECK (false)', tbl, api_roles);
                 seq := NULL;
                 IF EXISTS (SELECT 1 FROM information_schema.columns
                            WHERE table_schema = current_schema() AND table_name = tbl AND column_name = 'id') THEN

@@ -177,6 +177,11 @@ def test_supabase_public_api_roles_cannot_touch_the_tables(client, fake_ai):
     secured = sql("SELECT relname FROM pg_class WHERE relrowsecurity AND relname IN "
                   "('saved_itineraries', 'trip_chats', 'guide_cache') ORDER BY relname")
     assert [r[0] for r in secured] == ["guide_cache", "saved_itineraries", "trip_chats"]
+    policies = sql("SELECT tablename, permissive, roles::text FROM pg_policies "
+                   "WHERE policyname = 'No public access' ORDER BY tablename")
+    assert [p[0] for p in policies] == ["guide_cache", "saved_itineraries", "trip_chats"]
+    assert all(p[1] == "RESTRICTIVE" and "anon" in p[2] for p in policies)
+    api.ensure_schema()  # safe to run again on every startup
     for table in ("saved_itineraries", "trip_chats", "guide_cache"):
         with psycopg.connect(TEST_DB) as conn, conn.cursor() as cur:
             cur.execute("SET ROLE anon")
