@@ -1,4 +1,5 @@
 import inspect
+import pytest
 
 from conftest import ADMIN_TOKEN, sql
 import api
@@ -162,3 +163,25 @@ def test_existing_saved_trips_still_load(client):
     data = client.get(f"/api/itinerary/{trip}").json()
     assert data["guide_text"].startswith("## Old guide")
     assert data["locations"] == [{"name": "Colosseum", "lat": 41.8902, "lon": 12.4922}]
+
+
+def test_supabase_public_api_roles_cannot_touch_the_tables(client, fake_ai):
+    import psycopg
+    from conftest import TEST_DB
+    # Supabase's anon role, with the table grants its default privileges give it.
+    sql("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'anon') THEN CREATE ROLE anon NOLOGIN; END IF; END $$")
+    sql("GRANT USAGE ON SCHEMA public TO anon")
+    sql("GRANT ALL ON saved_itineraries, trip_chats, guide_cache TO anon")
+    api.ensure_schema()
+
+    secured = sql("SELECT relname FROM pg_class WHERE relrowsecurity AND relname IN "
+                  "('saved_itineraries', 'trip_chats', 'guide_cache') ORDER BY relname")
+    assert [r[0] for r in secured] == ["guide_cache", "saved_itineraries", "trip_chats"]
+    for table in ("saved_itineraries", "trip_chats", "guide_cache"):
+        with psycopg.connect(TEST_DB) as conn, conn.cursor() as cur:
+            cur.execute("SET ROLE anon")
+            with pytest.raises(psycopg.errors.InsufficientPrivilege):
+                cur.execute(f"SELECT * FROM {table}")
+
+    # The API, connecting as the owner, still works.
+    assert client.post("/api/generate-intel", json={"destination": "Rome", "month": "September"}).status_code == 200
