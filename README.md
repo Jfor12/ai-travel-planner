@@ -82,7 +82,7 @@ python -m http.server 3000   # then open http://localhost:3000
 | `styles.css` | Styles, light and dark themes |
 | `app.js` | Talks to the API, renders briefings, the map and saved trips |
 | `markdown.js` | Turns guide Markdown into safe HTML (everything is escaped first) |
-| `fonts/` | Newsreader and IBM Plex Mono, self-hosted (SIL Open Font License) |
+| `fonts/` | Bebas Neue (poster headlines) and Work Sans (text), self-hosted (SIL Open Font License) |
 
 Briefings have shareable links: `?destination=Paris&month=March` or `?trip=12`.
 
