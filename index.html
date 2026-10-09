@@ -8,14 +8,15 @@
 <meta name="author" content="Jacopo Fornesi">
 <link rel="canonical" href="https://jfor12.github.io/ai-travel-planner/">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#f3eee4" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#161412" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#1f2a44" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b111e" media="(prefers-color-scheme: dark)">
 <meta property="og:type" content="website">
 <meta property="og:title" content="AI Travel Planner">
 <meta property="og:description" content="A short, researched travel briefing for a city and month, with a map and sources.">
 <meta property="og:url" content="https://jfor12.github.io/ai-travel-planner/">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
-<link rel="preload" href="fonts/newsreader-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/bebas-neue-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/work-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="">
 <link rel="stylesheet" href="styles.css">
 <script>
@@ -30,7 +31,10 @@
 
 <header class="top">
   <div class="wrap top__inner">
-    <a class="top__home" href="https://jacopofornesi.co.uk/">Jacopo Fornesi</a>
+    <a class="brand" href="./">
+      <svg viewBox="0 0 64 64" aria-hidden="true" focusable="false"><circle cx="32" cy="32" r="30" fill="#9fd0d8"/><circle cx="32" cy="30" r="13" fill="#f2b134"/><path d="M2 38h60v4H2z" fill="#ec7a4f"/><path d="M4 44h56a30 30 0 0 1-56 0z" fill="#2f8a99"/><path d="M14 50c4-2 8 2 12 0s8 2 12 0 8 2 12 0" fill="none" stroke="#f4e9d2" stroke-width="2"/></svg>
+      AI Travel Planner
+    </a>
     <nav class="top__nav" aria-label="Site">
       <a href="https://github.com/Jfor12/ai-travel-planner">How it works</a>
       <button type="button" class="linkish" id="theme-toggle" aria-pressed="false">Dark mode</button>
@@ -40,8 +44,25 @@
 
 <main id="main" class="wrap" tabindex="-1">
   <header class="intro">
-    <h1>AI Travel Planner</h1>
-    <p class="intro__lede">Pick a city and a month. It searches the web and writes a short briefing: what to eat, which neighbourhoods suit you, how to get around, the scams to avoid and what the weather will be like.</p>
+    <div>
+      <p class="intro__kicker">Bon voyage</p>
+      <h1>Know before <span>you go</span></h1>
+      <p class="intro__lede">Pick a city and a month. It searches the web and writes a short briefing: what to eat, which neighbourhoods suit you, how to get around, the scams to avoid and what the weather will be like.</p>
+    </div>
+    <figure class="poster" aria-hidden="true">
+    <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMax slice" focusable="false">
+      <rect width="400" height="300" style="fill: var(--sky)"/>
+      <g fill="#f4e9d2" opacity=".45"><path d="M200 205 L459 187 L455 155Z"/><path d="M200 205 L447 125 L436 95Z"/><path d="M200 205 L420 67 L402 41Z"/><path d="M200 205 L381 18 L356 -3Z"/><path d="M200 205 L330 -20 L302 -34Z"/><path d="M200 205 L272 -45 L241 -52Z"/><path d="M200 205 L209 -55 L177 -54Z"/><path d="M200 205 L146 -49 L115 -41Z"/><path d="M200 205 L86 -29 L58 -13Z"/><path d="M200 205 L33 6 L10 28Z"/><path d="M200 205 L-10 52 L-27 79Z"/><path d="M200 205 L-41 108 L-51 138Z"/><path d="M200 205 L-57 169 L-60 200Z"/></g>
+      <circle cx="200" cy="205" r="62" style="fill: var(--sun)"/>
+      <path d="M0 210 Q60 170 120 200 T240 195 T400 190 V300 H0Z" style="fill: var(--teal)"/>
+      <path d="M0 225 Q80 205 160 222 T320 218 T400 214 V300 H0Z" fill="#1f2a44" opacity=".85"/>
+      <rect y="232" width="400" height="68" style="fill: var(--sea)"/>
+      <g fill="none" stroke-width="3" stroke="#f4e9d2" opacity=".8"><path d="M20 250q15-8 30 0t30 0 30 0"/><path d="M230 262q15-8 30 0t30 0 30 0"/><path d="M110 282q15-8 30 0t30 0 30 0"/><path d="M300 288q15-8 30 0t30 0"/></g>
+      <path d="M262 236h58l-10 12h-40z" fill="#1f2a44"/>
+      <path d="M290 233V170l-26 58z" style="fill: var(--coral-bright)"/><path d="M294 233V182l20 46z" fill="#fbf5e6"/>
+      <rect x="290" y="166" width="3" height="70" fill="#1f2a44"/>
+    </svg>
+  </figure>
   </header>
 
   <form class="ask" id="ask-form" novalidate>
