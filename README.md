@@ -31,7 +31,7 @@ The frontend is a static single-page application hosted on GitHub Pages. The bac
 ## Technology
 
 - Python, FastAPI, Uvicorn, Pydantic
-- LangChain, Groq, Tavily
+- Groq and Tavily (their own Python clients)
 - PostgreSQL with `psycopg`
 - Vanilla JavaScript (ES modules, no build step), HTML, CSS, Leaflet 1.9.4
 - Docker and Render
