@@ -3,12 +3,50 @@ import json
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from langchain_groq import ChatGroq
-from langchain_community.tools import TavilySearchResults
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
+from groq import Groq
+from tavily import TavilyClient
 
 from maps import guide_is_complete
+
+
+# 29 Oct 2026: the Groq and Tavily clients are used directly. LangChain (langchain, langchain-community,
+# langchain-core, langchain-groq) only wrapped these two calls and its 0.2 versions carried a long list of
+# published security advisories; the three prompts below are plain format strings.
+
+
+class TavilySearchResults:
+    """The web search: `invoke(query)` returns a list of {"url", "content"} or, on failure, the error as a
+    string (the shape the LangChain tool had, which `research` relies on)."""
+
+    def __init__(self, max_results=3):
+        self.max_results = max_results
+        self._client = None
+
+    def invoke(self, query):
+        try:
+            if self._client is None:
+                self._client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
+            response = self._client.search(query=query, max_results=self.max_results)
+            return [{"url": r.get("url", ""), "content": r.get("content", "")} for r in response.get("results", [])]
+        except Exception as error:  # the caller skips a failed search
+            return repr(error)
+
+
+def groq_client(api_key):
+    """GROQ_API_BASE points the client at another server (the tests run a local stand-in)."""
+    base_url = os.getenv("GROQ_API_BASE")
+    return Groq(api_key=api_key, base_url=base_url or None, max_retries=2)
+
+
+def complete(api_key, model, prompt, temperature, max_tokens=None, **options):
+    """One chat completion with the prompt as the only (user) message: (text, finish_reason)."""
+    request = {"model": model, "messages": [{"role": "user", "content": prompt}], "temperature": temperature}
+    if max_tokens is not None:
+        request["max_tokens"] = max_tokens
+    request.update(options)
+    response = groq_client(api_key).chat.completions.create(**request)
+    choice = response.choices[0]
+    return (choice.message.content or ""), choice.finish_reason
 
 
 PREFERRED_MODELS = (
@@ -113,7 +151,7 @@ def research(destination, month, max_results=3):
     return docs
 
 
-GUIDE_PROMPT = ChatPromptTemplate.from_template("""
+GUIDE_PROMPT = """
 You are an experienced local guide writing a short, practical briefing for a visitor.
 Be specific and direct. Prefer facts from the research notes; where they are silent,
 use well-established general knowledge and keep claims modest. Do not invent prices,
@@ -149,7 +187,7 @@ Write Markdown in exactly this format:
 
 ### COORDINATES
 List 3-4 of the neighbourhoods or places named above, one per line, exactly as: Name | Latitude | Longitude
-""")
+"""
 
 
 def generate_guide(destination, month):
@@ -168,15 +206,13 @@ def generate_guide(destination, month):
     # which leaves nearly all of the budget for the guide itself.
     efforts = [guide_effort(), "low"] if is_reasoning_model(model) else [None]
     for effort in dict.fromkeys(efforts):
-        llm = ChatGroq(
-            groq_api_key=groq_api,
-            model_name=model,
+        text, finish_reason = complete(
+            groq_api, model,
+            GUIDE_PROMPT.format(context=context, destination=destination, month=month),
             temperature=float(os.getenv('GROQ_TEMP_INTEL', '0.3')),
-            model_kwargs=reasoning_options(model, effort),
+            **reasoning_options(model, effort),
         )
-        message = (GUIDE_PROMPT | llm).invoke({"context": context, "destination": destination, "month": month})
-        text = message.content or ""
-        if message.response_metadata.get("finish_reason") != "length" and guide_is_complete(text):
+        if finish_reason != "length" and guide_is_complete(text):
             return text, [d["url"] for d in docs]
     raise RuntimeError("The model returned an empty or incomplete guide")
 
@@ -184,17 +220,7 @@ def generate_guide(destination, month):
 def run_chat_response(guide_context, user_query, model_name=None, temperature=None):
     groq_api = os.getenv("GROQ_API_KEY")
     model = get_intel_model(model_name)
-    llm = ChatGroq(
-        groq_api_key=groq_api,
-        model_name=model,
-        temperature=float(temperature or os.getenv('GROQ_TEMP_CHAT', '0.5')),
-        # Hidden reasoning counts towards this cap, so it's generous and reasoning
-        # is kept low: short answers need little of it.
-        max_tokens=2000,
-        model_kwargs=reasoning_options(model, "low"),
-    )
-
-    prompt = ChatPromptTemplate.from_template("""
+    prompt = """
     You are a helpful assistant answering questions about a specific travel guide.
     
     THE GUIDE:
@@ -204,10 +230,16 @@ def run_chat_response(guide_context, user_query, model_name=None, temperature=No
     {user_query}
     
     Answer based ONLY on the information in the guide provided above. If the answer is not in the guide, say "That information is not in this specific briefing." Keep answers concise.
-    """)
+    """
 
-    chain = prompt | llm | StrOutputParser()
-    response = chain.invoke({"guide_context": guide_context, "user_query": user_query})
+    response, _ = complete(
+        groq_api, model, prompt.format(guide_context=guide_context, user_query=user_query),
+        temperature=float(temperature or os.getenv('GROQ_TEMP_CHAT', '0.5')),
+        # Hidden reasoning counts towards this cap, so it's generous and reasoning
+        # is kept low: short answers need little of it.
+        max_tokens=2000,
+        **reasoning_options(model, "low"),
+    )
     return response.strip() or "Sorry, I couldn't come up with an answer to that. Please try asking another way."
 
 
@@ -216,13 +248,7 @@ def run_gen_response(guide_context, user_query, model_name=None, temperature=Non
     if not groq_api:
         return ""
 
-    llm = ChatGroq(
-        groq_api_key=groq_api,
-        model_name=get_intel_model(model_name),
-        temperature=float(temperature or os.getenv('GROQ_TEMP_INTEL', '0.3')),
-    )
-
-    prompt = ChatPromptTemplate.from_template("""
+    prompt = """
     You are a concise assistant that extracts or summarizes information from the provided guide.
 
     THE GUIDE:
@@ -232,10 +258,13 @@ def run_gen_response(guide_context, user_query, model_name=None, temperature=Non
     {user_query}
 
     Answer concisely and only using information in the guide. If the guide does not mention the requested item, reply exactly: No short description available.
-    """)
+    """
 
-    chain = prompt | llm | StrOutputParser()
-    return chain.invoke({"guide_context": guide_context, "user_query": user_query})
+    response, _ = complete(
+        groq_api, get_intel_model(model_name), prompt.format(guide_context=guide_context, user_query=user_query),
+        temperature=float(temperature or os.getenv('GROQ_TEMP_INTEL', '0.3')),
+    )
+    return response
 
 
 def generate_place_summary(guide_text, place_name):
