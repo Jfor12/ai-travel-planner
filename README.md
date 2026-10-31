@@ -19,11 +19,14 @@ The frontend is a static single-page application hosted on GitHub Pages. The bac
 
 ## Features
 
-- Destination and month-specific travel guides
-- Three focused Tavily searches combined with Groq responses, with the sources listed in each guide
+- Destination and month-specific travel guides, in fixed sections: Food (local dishes and where to try them), Neighbourhoods, Logistics (tipping, getting around), Scams, and Weather and crowds
+- Five focused Tavily searches, then Groq writes the guide as JSON in a fixed shape. The server checks it (`validate_guide` in `ai.py`): markets and venues are dropped from Neighbourhoods, international food from Food, generic advice from Scams; weather lines that contradict the typical temperatures go, and the crowd level must be low, medium or high. Anything it can't repair is asked for again once. Only then is the Markdown written (`render_guide`), with the sources listed
+- Guides cached before this format are written again on the next request
+- Before writing a new briefing, the page offers a saved trip for the same city and month (open it, or write a fresh one)
+- Saved trips grouped by city, newest briefing per month, with a filter
 - Cached guides to reduce repeated API usage (only the server writes to the cache)
 - Rate limits: five new guides and 20 questions per hour per IP, plus overall hourly caps
-- Interactive Leaflet maps, with places checked against OpenStreetMap (Nominatim)
+- Interactive Leaflet maps: the neighbourhoods and the restaurants and markets named for dishes, checked against OpenStreetMap (Nominatim). Each place in the text shows its pin number; tapping it shows the pin
 - Shared saved itineraries backed by PostgreSQL
 - PDF export with full Unicode text
 - Follow-up questions about a generated guide
@@ -109,7 +112,7 @@ The production API URL is configured in `index.html`. Push changes to `main` and
 | Endpoint | Body | Notes |
 |---|---|---|
 | `GET /health` | | |
-| `POST /api/generate-intel` | `destination`, `month` | Served from the cache when possible; otherwise rate limited |
+| `POST /api/generate-intel` | `destination`, `month`, optional `fresh` | Served from the cache when possible (not with `fresh: true`); otherwise rate limited |
 | `POST /api/chat` | `user_query` (max 500 chars) and either `trip_id` or `destination` + `month` | The guide is loaded on the server, never sent by the client |
 | `POST /api/save-itinerary` | `destination`, `month` | Saves the server-generated guide to the shared trips |
 | `POST /api/export-pdf` | `destination`, `month`, `guide_text` | |

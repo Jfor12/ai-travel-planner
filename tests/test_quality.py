@@ -33,8 +33,8 @@ def test_research_runs_focused_queries_and_survives_a_failed_search(monkeypatch)
 
     monkeypatch.setattr(ai, "TavilySearchResults", FakeTavily)
     docs = ai.research("Lisbon", "June")
-    assert len(queries) == 3 and any("June" in q for q in queries)
-    assert [d["url"] for d in docs] == ["https://a.example/x", "https://b.example/1", "https://b.example/3"]
+    assert len(queries) == 5 and any("June" in q for q in queries) and any("scams" in q for q in queries)
+    assert [d["url"] for d in docs] == ["https://a.example/x", "https://b.example/1", "https://b.example/2", "https://b.example/3", "https://b.example/5"]
 
 
 # --- Geocoding ---------------------------------------------------------------------------------------
@@ -104,7 +104,7 @@ def test_old_cached_guides_are_regenerated(client, fake_ai):
 
 
 def test_recent_cached_guides_are_used(client, fake_ai):
-    fresh = "## Food\n* **Supplì:** Fried rice balls.\n\n## Weather\n* **May:** Warm, 20–26°C."
+    fresh = "## Food\n* **Supplì:** Fried rice balls.\n\n## Scams\n* **Gladiator photos:** Pay after posing.\n\n## Weather\n* **May:** Warm, 20–26°C."
     sql("INSERT INTO guide_cache (destination_key, month, guide_text, created_at) VALUES ('rome', 'May', %s, %s)",
         (fresh, datetime.now() - timedelta(days=10)))
     assert client.post("/api/generate-intel", json={"destination": "Rome", "month": "May"}).json()["intel"] == fresh
@@ -210,6 +210,25 @@ def test_display_title():
 # --- Model settings -------------------------------------------------------------------------------------
 
 GOOD_GUIDE = "## Gastronomy\n* **Pintxos:** Small bites.\n\n## Logistics\n* **Transport:** Metro."
+GOOD_JSON = json.dumps({
+    "food": [
+        {"dish": "Cacio e pepe", "description": "Pasta with Pecorino and pepper", "where_to_try": "Trattorias in Testaccio", "places": ["Felice a Testaccio"]},
+        {"dish": "Supplì", "description": "Fried rice balls with mozzarella", "where_to_try": "Pizzerias and bakeries", "places": []},
+        {"dish": "Carciofi alla romana", "description": "Braised artichokes", "where_to_try": "In spring, most trattorias", "places": []},
+    ],
+    "neighbourhoods": [
+        {"name": "Testaccio", "description": "Working-class quarter with a food market", "suits": "Food lovers"},
+        {"name": "Monti", "description": "Village-like streets next to the Forum", "suits": "Couples"},
+        {"name": "Trastevere", "description": "Cobbled lanes across the river", "suits": "Evenings out"},
+    ],
+    "tipping": "Rounding up is enough", "transport": "Walk, or use the metro and buses",
+    "scams": [
+        {"name": "Gladiator photos", "how_it_works": "Costumed men demand money after a photo", "how_to_avoid": "Agree a price first or decline"},
+        {"name": "Friendship bracelet", "how_it_works": "A bracelet is tied on, then paid for", "how_to_avoid": "Keep your hands to yourself"},
+    ],
+    "weather": {"high_c": 27, "low_c": 17, "rain": "A few short storms", "summary": "Pack layers"},
+    "crowds": {"level": "medium", "reason": "Fewer visitors than in August"},
+})
 
 
 @pytest.fixture
@@ -224,7 +243,7 @@ def fake_groq(monkeypatch):
         def do_POST(self):
             request = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             seen.append(request)
-            content, finish = replies.get(request.get("reasoning_effort"), (GOOD_GUIDE, "stop"))
+            content, finish = replies.get(request.get("reasoning_effort"), (GOOD_JSON, "stop"))
             body = json.dumps({
                 "id": "x", "object": "chat.completion", "created": 0, "model": request["model"],
                 "choices": [{"index": 0, "finish_reason": finish, "message": {"role": "assistant", "content": content}}],
@@ -252,21 +271,23 @@ def fake_groq(monkeypatch):
 
 def test_guides_use_medium_reasoning_on_the_strongest_model(fake_groq, monkeypatch):
     monkeypatch.delenv("GROQ_MODEL_ID", raising=False)
-    text, sources = ai.generate_guide("Rome", "September")
+    text, sources, places = ai.generate_guide("Rome", "September")
     request = fake_groq.seen[-1]
     assert request["model"] == "openai/gpt-oss-120b"
     assert request["reasoning_effort"] == "medium"
+    assert request["response_format"] == {"type": "json_object"}
     assert "Only say where places are relative to each" in request["messages"][0]["content"]
-    assert text == GOOD_GUIDE and sources == ["https://example.com"]
+    assert text.startswith("## Food\n* **Cacio e pepe:**") and sources == ["https://example.com"]
+    assert places == [{"name": "Testaccio"}, {"name": "Monti"}, {"name": "Trastevere"}, {"name": "Felice a Testaccio"}]
     assert len(fake_groq.seen) == 1
 
 
 def test_an_empty_answer_is_retried_with_low_reasoning(fake_groq):
     # What happened live: reasoning used the whole budget, content came back empty.
     fake_groq.replies["medium"] = ("", "length")
-    text, _ = ai.generate_guide("Barcelona", "September")
+    text, _, _ = ai.generate_guide("Barcelona", "September")
     assert [r["reasoning_effort"] for r in fake_groq.seen] == ["medium", "low"]
-    assert text == GOOD_GUIDE
+    assert "## Scams" in text
 
 
 def test_a_cut_off_or_hollow_answer_is_retried(fake_groq):
@@ -294,7 +315,7 @@ def test_reasoning_effort_can_be_changed_and_is_only_sent_to_gpt_oss(fake_groq, 
 
 
 def test_chat_leaves_room_for_the_answer_and_never_returns_blank(fake_groq):
-    assert ai.run_chat_response(GOOD_GUIDE, "Where to eat?") == GOOD_GUIDE
+    assert ai.run_chat_response(GOOD_GUIDE, "Where to eat?") == GOOD_JSON
     request = fake_groq.seen[-1]
     assert request["reasoning_effort"] == "low" and request["max_tokens"] == 2000
     fake_groq.replies["low"] = ("", "length")
@@ -322,7 +343,7 @@ def test_an_empty_cached_guide_is_rewritten(client, fake_ai):
 
 
 def test_an_empty_guide_is_not_cached_or_saved(client, fake_ai, monkeypatch):
-    monkeypatch.setattr(api, "generate_guide", lambda d, m: ("", ["https://example.com"]))
+    monkeypatch.setattr(api, "generate_guide", lambda d, m: ("", ["https://example.com"], []))
     client.post("/api/generate-intel", json={"destination": "Barcelona", "month": "May"})
     assert sql("SELECT count(*) FROM guide_cache")[0][0] == 0
     assert client.post("/api/save-itinerary", json={"destination": "Barcelona", "month": "May"}).status_code == 404
@@ -346,3 +367,84 @@ def test_admin_can_see_which_model_is_used(client, monkeypatch):
     monkeypatch.setattr(api, "get_intel_model", lambda: "openai/gpt-oss-120b")
     info = client.get("/api/admin/request-info", headers={"X-Admin-Token": ADMIN_TOKEN}).json()
     assert info["model"] == "openai/gpt-oss-120b"
+
+
+# --- Guide sections hold only what their headings promise (31 Oct 2026) ----------------------------------
+
+def test_the_guide_is_rendered_with_one_section_per_promise():
+    guide, problems = ai.validate_guide(json.loads(GOOD_JSON))
+    assert problems == []
+    text = ai.render_guide(guide, "September")
+    assert [line for line in text.splitlines() if line.startswith("## ")] == [
+        "## Food", "## Neighbourhoods", "## Logistics", "## Scams", "## Weather and crowds (September)"]
+    assert "* **Cacio e pepe:** Pasta with Pecorino and pepper. *Where to try it:* Trattorias in Testaccio, for example Felice a Testaccio." in text
+    assert "* **Weather:** Highs around 27°C (81°F), lows around 17°C (63°F). A few short storms. Pack layers." in text
+    assert "* **Crowds:** Medium. Fewer visitors than in August." in text
+    assert maps.guide_is_complete(text) and maps.is_current_format(text)
+
+
+def test_validation_repairs_what_breaks_the_rules():
+    data = json.loads(GOOD_JSON)
+    data["neighbourhoods"].append({"name": "Mercato di Testaccio", "description": "A covered market", "suits": "Lunch"})
+    data["neighbourhoods"].append({"name": "Campo de' Fiori Market", "description": "Stalls", "suits": "Mornings"})
+    data["food"].append({"dish": "Middle Eastern-inspired street food", "description": "Falafel", "where_to_try": "", "places": []})
+    data["scams"].append({"name": "Pickpockets", "how_it_works": "Busy buses", "how_to_avoid": "Front pockets"})
+    data["weather"] = {"high_c": "17", "low_c": 27, "rain": "Expect 35°C heatwaves", "summary": "Light layers"}
+    data["crowds"] = {"level": "Moderate", "reason": "September is busy but calmer than August"}
+    data["tipping"] = "Not needed in this neighborhood's cafes"
+    guide, problems = ai.validate_guide(data)
+    assert problems == []
+    assert [n["name"] for n in guide["neighbourhoods"]] == ["Testaccio", "Monti", "Trastevere"]
+    assert all("inspired" not in f["dish"] for f in guide["food"])
+    assert [s["name"] for s in guide["scams"]] == ["Gladiator photos", "Friendship bracelet"]
+    assert guide["weather"] == {"high_c": 27.0, "low_c": 17.0, "rain": "", "summary": "Light layers"}  # swapped; 35°C dropped
+    assert guide["crowds"]["level"] == "Medium"
+    assert "neighbourhood" in guide["tipping"]
+
+
+def test_validation_reports_what_cant_be_repaired():
+    data = json.loads(GOOD_JSON)
+    data["scams"] = [{"name": "Scams", "how_it_works": "Be careful", "how_to_avoid": ""}]
+    data["crowds"] = {"level": "it depends", "reason": ""}
+    _, problems = ai.validate_guide(data)
+    assert any(p.startswith("scams") for p in problems) and any(p.startswith("crowds") for p in problems)
+
+
+def test_json_is_found_inside_a_fence_and_broken_json_is_rejected():
+    assert ai.parse_guide_json('Here you go:\n```json\n{"food": []}\n```')["food"] == []
+    with pytest.raises(ai.GuideFormatError):
+        ai.parse_guide_json('{"food": [')
+
+
+def test_an_answer_that_breaks_the_rules_is_retried_then_accepted_if_usable(fake_groq):
+    short = json.loads(GOOD_JSON)
+    short["scams"] = []
+    fake_groq.replies["medium"] = ("not json at all", "stop")
+    fake_groq.replies["low"] = (json.dumps(short), "stop")
+    text, _, _ = ai.generate_guide("Rome", "May")
+    assert [r["reasoning_effort"] for r in fake_groq.seen] == ["medium", "low"]
+    assert "**No specific scams found:**" in text
+
+
+def test_hyphens_in_place_names_are_kept_and_stray_rules_are_dropped():
+    old = "## Neighborhoods\n* **Le Marais:** Old streets.\n\n---\n### COORDINATES\nCanal Saint-Martin | 48.8703 | 2.3695"
+    assert maps.extract_map_data(old) == [{"name": "Canal Saint-Martin", "lat": 48.8703, "lon": 2.3695}]
+    assert maps.guide_body(old).endswith("Old streets.")
+
+
+def test_old_format_cached_guides_are_rewritten_and_fresh_skips_the_cache(client, fake_ai):
+    sql("INSERT INTO guide_cache (destination_key, month, guide_text) VALUES ('rome', 'May', %s)",
+        ("## Gastronomy\n* **A:** b\n\n## Logistics\n* **Safety:** Pickpockets.",))
+    assert client.post("/api/generate-intel", json={"destination": "Rome", "month": "May"}).json()["cached"] is False
+    assert client.post("/api/generate-intel", json={"destination": "Rome", "month": "May"}).json()["cached"] is True
+    assert client.post("/api/generate-intel", json={"destination": "Rome", "month": "May", "fresh": True}).json()["cached"] is False
+    assert len(fake_ai["generate"]) == 2
+
+
+def test_places_without_coordinates_are_dropped_when_the_geocoder_is_down(monkeypatch):
+    def down(query):
+        raise geo.GeocoderUnavailable("timeout")
+    geo._cache.clear()
+    monkeypatch.setattr(geo, "_fetch", down)
+    assert geo.verify_locations("Rome", [{"name": "Monti"}, {"name": "Colosseum", "lat": 41.89, "lon": 12.49}]) == [
+        {"name": "Colosseum", "lat": 41.89, "lon": 12.49}]

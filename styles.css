@@ -69,7 +69,7 @@ a:hover { color: var(--coral); }
 button, input, select { font: inherit; color: inherit; }
 [hidden] { display: none !important; }
 .vh { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.skip { position: absolute; left: var(--gutter); top: -4rem; z-index: 1000; padding: .5rem .9rem; background: var(--coral); color: var(--on-coral); font-weight: 700; }
+.skip { position: absolute; left: var(--gutter); top: -4rem; z-index: 1000; padding: .7rem .9rem; background: var(--coral); color: var(--on-coral); font-weight: 700; }
 .skip:focus { top: .75rem; }
 .wrap { width: min(100% - 2 * var(--gutter), 74rem); margin-inline: auto; }
 main:focus { outline: none; }
@@ -78,15 +78,20 @@ main:focus { outline: none; }
 .top { background: var(--band); color: var(--band-ink); }
 .top::after { content: ""; display: block; height: 8px; background: repeating-linear-gradient(90deg, var(--sun) 0 24px, var(--coral-bright) 24px 48px, var(--sea) 48px 72px); }
 .top__inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem 1.5rem; padding-block: .8rem; }
-.brand { display: inline-flex; align-items: center; gap: .6rem; color: var(--band-ink); text-decoration: none; font: 400 1.6rem/1 var(--poster); letter-spacing: .05em; }
+.brand { display: inline-flex; align-items: center; min-height: 2.75rem; gap: .6rem; color: var(--band-ink); text-decoration: none; font: 400 1.6rem/1 var(--poster); letter-spacing: .05em; }
 .brand:hover { color: var(--band-accent); }
 .brand svg { flex: none; width: 2.2rem; height: 2.2rem; }
 .top__nav { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem 1.25rem; font-size: .9375rem; }
-.top__nav a, .top .linkish { color: var(--band-ink); text-decoration: none; }
-.top__nav a:hover, .top .linkish:hover { color: var(--band-accent); }
-.top .linkish { padding: .3rem .8rem; border: 1px solid rgba(244, 233, 210, .35); }
+.top__nav a { display: inline-flex; align-items: center; min-height: 2.75rem; color: var(--band-ink); text-decoration: none; }
+.top__nav a:hover { color: var(--band-accent); }
+/* Theme toggle: shows the theme on screen (sun = light, moon = dark); pressed = dark mode on. */
+.theme { display: inline-grid; place-items: center; width: 2.75rem; height: 2.75rem; padding: 0; border: 1px solid rgba(244, 233, 210, .35); background: none; color: var(--band-ink); cursor: pointer; }
+.theme:hover { color: var(--band-accent); border-color: var(--band-accent); }
+.theme svg { grid-area: 1 / 1; width: 1.35rem; height: 1.35rem; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.theme[aria-pressed="true"] .theme__sun, .theme[aria-pressed="false"] .theme__moon { display: none; }
+.theme[aria-pressed="true"] .theme__moon { fill: currentColor; }
 
-.linkish { padding: .25rem 0; border: 0; background: none; color: var(--teal); font-size: .9375rem; font-weight: 600; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .2em; cursor: pointer; }
+.linkish { display: inline-flex; align-items: center; min-height: 2.75rem; padding: .25rem 0; border: 0; background: none; color: var(--teal); font-size: .9375rem; font-weight: 600; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: .2em; cursor: pointer; }
 .linkish:hover, .linkish[aria-pressed="true"] { color: var(--coral); }
 
 /* The poster ------------------------------------------------------------------------ */
@@ -98,18 +103,34 @@ main:focus { outline: none; }
 .intro__lede { max-width: 34rem; margin-top: 1.1rem; font-size: clamp(1.05rem, 1rem + .3vw, 1.2rem); line-height: 1.55; color: var(--ink-soft); }
 .poster { margin: 0; width: 100%; max-width: 30rem; justify-self: center; border: 3px solid var(--ink); box-shadow: 8px 8px 0 var(--ink); background: var(--sky); }
 .poster svg { display: block; width: 100%; height: auto; }
-@media (max-width: 51.99rem) { .poster { order: -1; max-width: none; justify-self: stretch; box-shadow: 5px 5px 0 var(--ink); } .poster svg { height: 7.5rem; } }
+/* Phones: a slim strip of the poster, so the form shows on the first screen. */
+@media (max-width: 51.99rem) {
+  .intro { gap: 1rem; padding-block: 1.25rem 1rem; }
+  .poster { order: -1; max-width: none; justify-self: stretch; border-width: 2px; box-shadow: 4px 4px 0 var(--ink); }
+  /* The middle band of the picture: the sun on the horizon and the boat. */
+  .poster { height: 4.25rem; overflow: hidden; }
+  .poster svg { height: auto; transform: translateY(-52%); }
+  .intro h1 { font-size: clamp(2.6rem, 1.6rem + 6vw, 3.4rem); }
+  .intro__lede { margin-top: .75rem; font-size: 1rem; }
+}
 
 /* The question, as a ticket ----------------------------------------------------------- */
 .ask {
   position: relative; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem 1.25rem;
   padding: 1.25rem 1.5rem; border: 2px solid var(--ink); background: var(--card); box-shadow: var(--shadow);
-  /* punched notches on both ends */
-  -webkit-mask: radial-gradient(circle .75rem at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle .75rem at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
-          mask: radial-gradient(circle .75rem at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle .75rem at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
 }
+/* Punched notches on both ends: half-circles in the page colour, with the ticket's outline following the curve.
+   (A mask used to cut them, which also cut off the shadow and left the outline straight across the hole.) */
+.ask::before, .ask::after {
+  content: ""; position: absolute; top: 50%; width: 1.5rem; height: 1.5rem; margin-top: -.75rem;
+  border: 2px solid var(--ink); border-radius: 50%; background: var(--paper); pointer-events: none;
+}
+.ask::before { left: calc(-.75rem - 2px); clip-path: inset(-2px -2px -2px 50%); }
+.ask::after { right: calc(-.75rem - 2px); clip-path: inset(-2px 50% -2px -2px); }
 .ask__field { display: grid; gap: .35rem; flex: 1 1 12rem; max-width: 20rem; }
-.ask label { color: var(--muted); font-size: .75rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.ask__label { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 .75rem; }
+.ask__hint { color: var(--muted); font-size: .8125rem; }
+.ask label { color: var(--muted); font-size: .8125rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
 select, .chat input {
   width: 100%; min-height: 2.9rem; padding: .5rem .8rem; border: 2px solid var(--ink); border-radius: 0; background: var(--paper);
   font-size: 1.05rem; font-weight: 500;
@@ -139,7 +160,7 @@ select:focus-visible, .chat input:focus-visible { outline-offset: 0; }
 /* The briefing --------------------------------------------------------------------------- */
 .result, .saved { padding-bottom: clamp(2.5rem, 6vw, 4rem); outline: none; }
 .result__head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem 2rem; padding-block: 1.75rem 1.1rem; border-bottom: 4px double var(--ink); }
-.kicker { display: inline-block; padding: .3rem .6rem; border: 2px solid var(--coral); color: var(--coral); font: 700 .75rem/1 var(--sans); letter-spacing: .16em; text-transform: uppercase; transform: rotate(-2deg); }
+.kicker { display: inline-block; padding: .3rem .6rem; border: 2px solid var(--coral); color: var(--coral); font: 700 .8125rem/1 var(--sans); letter-spacing: .16em; text-transform: uppercase; transform: rotate(-2deg); }
 .result h2, .saved h2 { margin-top: .6rem; font-size: clamp(2.8rem, 2rem + 3.5vw, 4.5rem); color: var(--ink); text-shadow: 3px 3px 0 var(--sun); }
 .result__meta { margin-top: .5rem; color: var(--muted); font-size: .875rem; }
 .actions { display: flex; flex-wrap: wrap; gap: .6rem; }
@@ -157,6 +178,8 @@ select:focus-visible, .chat input:focus-visible { outline-offset: 0; }
   background: var(--teal); color: var(--card); font-size: 1.7rem; letter-spacing: .05em; box-shadow: 3px 3px 0 var(--ink);
 }
 .guide h3:first-child { margin-top: 0; }
+.guide h3 { display: flex; align-items: center; gap: .55rem; }
+.guide h3 .h-icon { flex: none; font-size: .8em; line-height: 1; }
 .guide ul { margin: 0; padding: 1.6rem 1.25rem .5rem; list-style: none; border: 2px solid var(--ink); background: var(--card); }
 .guide li { padding: .7rem 0; border-bottom: 1px dashed var(--rule); color: var(--ink-soft); }
 .guide li:last-child { border-bottom: 0; }
@@ -167,7 +190,7 @@ select:focus-visible, .chat input:focus-visible { outline-offset: 0; }
 .guide p { color: var(--ink-soft); }
 .guide a { color: var(--teal); }
 /* Sources: the small print on the back of the card */
-.guide h3.sources { padding: 0; background: none; box-shadow: none; color: var(--muted); font: 700 .75rem/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; margin: .5rem 0 -1rem; }
+.guide h3.sources { padding: 0; background: none; box-shadow: none; color: var(--muted); font: 700 .8125rem/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; margin: .5rem 0 -1rem; }
 .guide ul.sources { padding: .5rem 0 0; border: 0; background: none; }
 .guide ul.sources li { padding: .2rem 0; border: 0; font-size: .8125rem; }
 
@@ -177,7 +200,7 @@ select:focus-visible, .chat input:focus-visible { outline-offset: 0; }
 .map--empty { display: grid; place-items: center; padding: 1rem; color: var(--muted); font-size: .875rem; text-align: center; }
 .places { margin: 1.5rem 0 0; padding: 0; list-style: none; font-size: .9375rem; }
 .places li { border-bottom: 1px dashed var(--rule); }
-.places button { display: flex; align-items: center; gap: .75rem; width: 100%; padding: .55rem 0; border: 0; background: none; text-align: left; font-weight: 500; cursor: pointer; }
+.places button { display: flex; align-items: center; gap: .75rem; width: 100%; min-height: 2.75rem; padding: .45rem 0; border: 0; background: none; text-align: left; font-weight: 500; cursor: pointer; }
 .places button:hover { color: var(--coral); }
 .places .n { flex: none; width: 1.6rem; height: 1.6rem; display: grid; place-items: center; border: 2px solid var(--ink); border-radius: 50%; background: var(--coral-bright); color: #1f2a44; font: 400 1rem/1 var(--poster); }
 .hint { margin-top: .6rem; color: var(--muted); font-size: .8125rem; }
@@ -185,31 +208,58 @@ select:focus-visible, .chat input:focus-visible { outline-offset: 0; }
 /* Numbered map pins: coral, navy outline */
 .pin { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: #ec7a4f; border: 2px solid #1f2a44; box-shadow: 2px 2px 0 #1f2a44; }
 .pin span { transform: rotate(45deg); color: #1f2a44; font: 15px/1 var(--poster); }
+.pin { transition: transform .15s; }
+.pin--active { background: #f2b134; transform: rotate(-45deg) scale(1.35); box-shadow: 0 0 0 4px rgba(31, 42, 68, .35), 2px 2px 0 #1f2a44; }
+/* A place in the text, with its pin number: tap to show it on the map. */
+.place-ref {
+  display: inline; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: inherit;
+  text-decoration: underline dotted var(--teal); text-decoration-thickness: 2px; text-underline-offset: .2em; cursor: pointer;
+}
+.place-ref:hover { color: var(--coral); }
+.place-ref .n {
+  display: inline-grid; place-items: center; width: 1.35em; height: 1.35em; margin-left: .3em; vertical-align: .1em;
+  border: 2px solid var(--ink); border-radius: 50%; background: var(--coral-bright); color: #1f2a44; font: 400 .85em/1 var(--poster);
+}
 .leaflet-container { font: .875rem var(--sans); }
 .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--card); color: var(--ink); border-radius: 0; }
 
 /* Questions: a second ticket -------------------------------------------------------------- */
 .chat { max-width: 44rem; margin-top: 2.5rem; padding: 1.25rem 1.5rem 1.5rem; border: 2px solid var(--ink); background: var(--card); box-shadow: var(--shadow); }
 .chat h3 { font-size: 1.9rem; color: var(--teal); }
-.chat__form { display: flex; gap: .6rem; margin-top: .9rem; }
-.chat__form input { flex: 1; min-width: 0; }
+.chat__form { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .9rem; }
+.chat__form input { flex: 1 1 14rem; min-width: 0; }
+.chat__answer--error { padding: .75rem 1rem; border: 2px solid currentColor; background: var(--error-bg); color: var(--error-ink); }
 .chat__answer { margin-top: 1rem; color: var(--ink-soft); }
 .chat__answer > * + * { margin-top: .6rem; }
 .chat__answer ul { padding-left: 1.2rem; }
 
-/* Saved trips: a rack of postcards ---------------------------------------------------------- */
-.trips { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); gap: 1rem; margin: 1.5rem 0 0; padding: 0; list-style: none; }
-.trips button {
-  position: relative; display: grid; gap: .5rem; width: 100%; min-height: 7.5rem; padding: 1rem 1.1rem; align-content: space-between;
-  border: 2px solid var(--ink); background: var(--card); box-shadow: var(--shadow); text-align: left; cursor: pointer; transition: transform .1s;
-}
-.trips button::after { content: ""; position: absolute; top: .75rem; right: .75rem; width: 2rem; height: 2.4rem; border: 2px dashed var(--coral); background: linear-gradient(var(--sun) 0 50%, var(--sea) 50%); opacity: .9; }
-.trips button:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--ink); }
-.trips button:hover .trips__name { color: var(--coral); }
-.trips__name { padding-right: 2.75rem; font: 400 1.75rem/1 var(--poster); letter-spacing: .03em; }
-.trips__date { color: var(--muted); font-size: .8125rem; }
+/* Saved trips: a rack of postcards, one per city, with a chip per month ------------------------------ */
+.saved h2:focus { outline: none; }
+.saved h2:focus-visible { outline: 3px solid var(--coral); outline-offset: 4px; }
+.filter { display: grid; gap: .35rem; flex: 0 1 16rem; }
+.filter label { color: var(--muted); font-size: .8125rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.filter input { width: 100%; min-height: 2.9rem; padding: .5rem .8rem; border: 2px solid var(--ink); border-radius: 0; background: var(--paper); font-size: 1rem; }
+.filter input:focus-visible { outline-offset: 0; }
+.saved > .hint { margin-top: 1rem; }
+.trips { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr)); gap: 1rem; margin: 1rem 0 0; padding: 0; list-style: none; }
+.trip { position: relative; display: grid; gap: .8rem; align-content: start; padding: 1rem 1.1rem 1.1rem; border: 2px solid var(--ink); background: var(--card); box-shadow: var(--shadow); }
+.trip::after { content: ""; position: absolute; top: .75rem; right: .75rem; width: 2rem; height: 2.4rem; border: 2px dashed var(--coral); background: linear-gradient(var(--sun) 0 50%, var(--sea) 50%); opacity: .9; }
+.trips__name { padding-right: 2.75rem; font: 400 1.9rem/1 var(--poster); letter-spacing: .03em; color: var(--ink); }
+.chips { display: flex; flex-wrap: wrap; gap: .45rem; margin: 0; padding: 0; list-style: none; }
+.chip { min-height: 2.75rem; padding: .35rem .8rem; border: 2px solid var(--ink); border-radius: 999px; background: var(--paper); color: var(--ink); font-size: .9375rem; font-weight: 600; cursor: pointer; }
+.chip:hover { background: var(--sun); color: #1f2a44; }
 .trips__empty { padding: 1rem 0; color: var(--muted); }
-@media (prefers-reduced-motion: reduce) { .trips button { transition: none; } }
+
+/* Already written: open it or write a fresh one ------------------------------------------------------- */
+.existing { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1.5rem; margin-top: 1.25rem; padding: 1rem 1.25rem; border: 2px solid var(--ink); background: var(--sand); box-shadow: var(--shadow); }
+.existing p { font-weight: 600; }
+.status-actions { margin-top: .75rem; }
+
+/* How it works ------------------------------------------------------------------------------------------ */
+.how { max-width: 48rem; padding-block: 1rem clamp(2.5rem, 6vw, 4rem); outline: none; }
+.how h2 { font-size: clamp(2.2rem, 1.8rem + 2vw, 3rem); color: var(--ink); text-shadow: 3px 3px 0 var(--sun); }
+.how ol { display: grid; gap: .75rem; margin: 1rem 0 0; padding-left: 1.4rem; color: var(--ink-soft); }
+.how strong { color: var(--ink); }
 
 /* Footer ------------------------------------------------------------------------------------- */
 .foot { margin-top: 1rem; background: var(--band); color: var(--band-ink); font-size: .9375rem; }
@@ -217,6 +267,7 @@ select:focus-visible, .chat input:focus-visible { outline-offset: 0; }
 .foot__inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .75rem 2rem; padding-block: 1.75rem 2.25rem; }
 .foot ul { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; margin: 0; padding: 0; list-style: none; }
 .foot a { color: var(--band-accent); }
+.foot li a { display: inline-flex; align-items: center; min-height: 2.75rem; }
 .foot a:hover { color: var(--band-ink); }
 
 @media (max-width: 40rem) {
@@ -224,11 +275,22 @@ select:focus-visible, .chat input:focus-visible { outline-offset: 0; }
   .ask__field { max-width: none; }
   .ask .button { flex: 1 1 100%; }
   .ask__saved { margin-left: 0; }
+  /* The question gets the full width (so its example isn't cut off) and Ask goes below it. */
+  .chat { padding-inline: 1.1rem; }
+  .chat__form input { flex-basis: 100%; }
+  .chat__form .button { flex: 1 1 100%; }
+  .filter { flex-basis: 100%; }
 }
+/* Leaflet's controls, big enough to tap */
+.leaflet-touch .leaflet-bar a { width: 44px; height: 44px; line-height: 44px; font-size: 22px; }
+.leaflet-touch a.leaflet-popup-close-button { width: 44px; height: 44px; font: 24px/44px var(--sans); }
+.leaflet-touch .leaflet-popup-content { margin-right: 44px; }
+.leaflet-container .leaflet-control-attribution { font-size: .8125rem; }
 
 @media print {
   body { background: #fff; color: #000; }
-  .top, .intro, .ask, .fine, .status, .actions, .chat, .foot, .skip, .saved { display: none !important; }
+  .top, .intro, .ask, .fine, .status, .actions, .chat, .foot, .skip, .saved, .how, .existing { display: none !important; }
+  .place-ref { text-decoration: none; }
   .result__body { display: block; }
   .guide h3 { background: none; color: #000; box-shadow: none; padding: 0; margin: 1rem 0 .25rem; }
   .guide ul { border: 0; padding: 0; background: none; }
@@ -236,7 +298,7 @@ select:focus-visible, .chat input:focus-visible { outline-offset: 0; }
 }
 
 @media (forced-colors: active) {
-  .pin, .places .n { forced-color-adjust: none; }
+  .pin, .places .n, .place-ref .n { forced-color-adjust: none; }
   .guide h3 { forced-color-adjust: none; background: Canvas; color: CanvasText; border: 2px solid CanvasText; }
 }
 

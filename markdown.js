@@ -7,6 +7,24 @@ export const escapeHtml = value => String(value ?? '')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 const PAGE_BREAK = /\(?-{3}\s*page break\s*-{3}\)?/i;
+const RULE = /^([-*_])(\s*\1){2,}$/; // "---": older guides end with one before the coordinates
+
+// Each section's icon comes from its name, so older guides (with their own emoji, and a warning sign on
+// Logistics) and newer ones look the same. The model's emoji, if any, is dropped.
+const SECTION_ICONS = [
+    [/\b(food|gastronomy|eat)\b/i, '🍝'],
+    [/neighbo/i, '🏘️'],
+    [/logistics|getting around/i, '🧭'],
+    [/scam/i, '🛡️'],
+    [/weather|season|crowd/i, '🌦️'],
+];
+const LEADING_SYMBOLS = /^[^\p{L}\p{N}(]+/u;
+
+function sectionHeading(text) {
+    const name = String(text).replace(LEADING_SYMBOLS, '').replace(/\bNeighborhood/g, 'Neighbourhood').trim();
+    const icon = SECTION_ICONS.find(([pattern]) => pattern.test(name))?.[1];
+    return icon ? `<span class="h-icon" aria-hidden="true">${icon}</span><span>${inline(name)}</span>` : inline(name);
+}
 
 function inline(text) {
     const links = [];
@@ -23,7 +41,7 @@ function inline(text) {
 }
 
 // Returns HTML for the readable part of a guide (the map coordinates block is left out).
-export function markdownToHtml(markdown, { headingOffset = 0 } = {}) {
+export function markdownToHtml(markdown, { headingOffset = 0, icons = false } = {}) {
     const body = String(markdown ?? '').split(PAGE_BREAK)[0];
     const out = [];
     let list = null;
@@ -38,11 +56,11 @@ export function markdownToHtml(markdown, { headingOffset = 0 } = {}) {
             continue;
         }
         flush();
-        if (!line) continue;
+        if (!line || RULE.test(line)) continue;
         const heading = line.match(/^(#{1,4})\s+(.*)$/);
         if (heading) {
             const level = Math.min(6, heading[1].length + headingOffset);
-            out.push(`<h${level}>${inline(heading[2])}</h${level}>`);
+            out.push(`<h${level}>${icons && heading[1].length === 2 ? sectionHeading(heading[2]) : inline(heading[2])}</h${level}>`);
         } else {
             out.push(`<p>${inline(line)}</p>`);
         }

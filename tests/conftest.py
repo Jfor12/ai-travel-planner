@@ -52,10 +52,10 @@ def fake_ai(monkeypatch):
 
     def fake_generate(destination, month, *args, **kwargs):
         calls["generate"].append({"destination": destination, "month": month, "args": args, "kwargs": kwargs})
-        text = (f"## Neighborhoods\n* **Old Town:** Generated guide for {destination} in {month}.\n\n"
-                "## Logistics\n* **Transport:** Walk or take the tram.\n\n"
-                "(---PAGE BREAK---)\n\n### COORDINATES\nOld Town | 41.9 | 12.5\n")
-        return text, ["https://www.example.com/guide", "https://blog.example.org/food"]
+        text = (f"## Neighbourhoods\n* **Old Town:** Generated guide for {destination} in {month}.\n\n"
+                "## Logistics\n* **Getting around:** Walk or take the tram.\n\n"
+                "## Scams\n* **Fake petition:** Someone asks you to sign, then for money. *Avoid it:* Walk on.")
+        return text, ["https://www.example.com/guide", "https://blog.example.org/food"], [{"name": "Old Town", "lat": 41.9, "lon": 12.5}]
 
     def fake_chat(guide_context, user_query, *args, **kwargs):
         calls["chat"].append({"guide": guide_context, "query": user_query, "args": args, "kwargs": kwargs})

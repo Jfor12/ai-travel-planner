@@ -36,3 +36,17 @@ test('indented bullets are marked as sub-points', () => {
     const html = markdownToHtml('* **Safety:**\n  * **Pickpockets:** Front pockets.\n* **Tips:** Round up.');
     assert.equal(html, '<ul><li><strong>Safety:</strong></li><li class="sub"><strong>Pickpockets:</strong> Front pockets.</li><li><strong>Tips:</strong> Round up.</li></ul>');
 });
+
+test('stray rules are dropped; section icons are consistent and the emoji gets its own span', () => {
+    const html = markdownToHtml('## ⚠️ Logistics\n* x\n\n## 🍝 Gastronomy (What to order)\n* y\n\n## Neighborhoods\n* z\n\n---\n### COORDINATES\nA | 1 | 2', { headingOffset: 1, icons: true });
+    assert.doesNotMatch(html, /---|⚠/);
+    assert.match(html, /<h3><span class="h-icon" aria-hidden="true">🧭<\/span><span>Logistics<\/span><\/h3>/);
+    assert.match(html, /<h3><span class="h-icon" aria-hidden="true">🍝<\/span><span>Gastronomy \(What to order\)<\/span><\/h3>/);
+    assert.match(html, /<span>Neighbourhoods<\/span>/);
+    assert.match(markdownToHtml('## Weather and crowds (May)', { icons: true }), /🌦️/);
+    assert.equal(markdownToHtml('## Sources\n* [a](https://a.com)', { icons: true }), '<h2>Sources</h2><ul><li><a href="https://a.com" rel="noopener noreferrer" target="_blank">a</a></li></ul>');
+});
+
+test('hyphenated names are left alone', () => {
+    assert.equal(markdownToHtml('* **Canal Saint-Martin:** A walk-up bar.'), '<ul><li><strong>Canal Saint-Martin:</strong> A walk-up bar.</li></ul>');
+});
