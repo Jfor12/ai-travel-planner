@@ -178,4 +178,4 @@ def get_history(limit=200):
 
 
 def get_itinerary_details(trip_id):
-    return _run("SELECT destination, itinerary_text FROM saved_itineraries WHERE id = %s", (trip_id,), fetch='one')
+    return _run("SELECT destination, itinerary_text, created_at FROM saved_itineraries WHERE id = %s", (trip_id,), fetch='one')

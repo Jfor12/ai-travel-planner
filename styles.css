@@ -254,6 +254,8 @@ select:focus-visible, .chat input:focus-visible { outline-offset: 0; }
 .existing { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1.5rem; margin-top: 1.25rem; padding: 1rem 1.25rem; border: 2px solid var(--ink); background: var(--sand); box-shadow: var(--shadow); }
 .existing p { font-weight: 600; }
 .status-actions { margin-top: .75rem; }
+.old-format { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1.5rem; margin-top: 1.5rem; padding: 1rem 1.25rem; border: 2px dashed var(--ink); background: var(--sand); }
+.old-format p { flex: 1 1 22rem; color: var(--ink); }
 
 /* How it works ------------------------------------------------------------------------------------------ */
 .how { max-width: 48rem; padding-block: 1rem clamp(2.5rem, 6vw, 4rem); outline: none; }

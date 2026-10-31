@@ -163,6 +163,7 @@ def test_existing_saved_trips_still_load(client):
     data = client.get(f"/api/itinerary/{trip}").json()
     assert data["guide_text"].startswith("## Old guide")
     assert data["locations"] == [{"name": "Colosseum", "lat": 41.8902, "lon": 12.4922}]
+    assert data["current_format"] is False and data["saved_at"]  # the page offers to write it again
 
 
 def test_supabase_public_api_roles_cannot_touch_the_tables(client, fake_ai):
