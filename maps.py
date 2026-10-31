@@ -17,9 +17,20 @@ POINT = re.compile(r"([^|\n]+)\|\s*(-?\d+(?:\.\d+)?)\s*\|\s*(-?\d+(?:\.\d+)?)")
 FONT_DIR = os.getenv("PDF_FONT_DIR", os.path.join(os.path.dirname(os.path.abspath(__file__)), "pdf-fonts"))
 
 
+RULE = re.compile(r"(?m)^\s*([-*_])(\s*\1){2,}\s*$")  # a Markdown rule ("---"), which older guides end with
+COORDINATES = re.compile(r"(?mi)^#{1,6}\s*coordinates\b")
+
+
 def guide_body(text):
-    """The readable part of a guide, without the coordinates block."""
-    return PAGE_BREAK.split(text, maxsplit=1)[0].rstrip()
+    """The readable part of a guide, without the coordinates block or stray rules."""
+    body = PAGE_BREAK.split(text, maxsplit=1)[0]
+    body = COORDINATES.split(body, maxsplit=1)[0]
+    return RULE.sub("", body).rstrip()
+
+
+def is_current_format(text):
+    """Guides written since 31 Oct 2026 have a Scams section of their own; older cached ones are regenerated."""
+    return bool(re.search(r"(?m)^##\s+Scams\b", guide_body(text or "")))
 
 
 def extract_map_data(text):
@@ -28,9 +39,10 @@ def extract_map_data(text):
     source = parts[1] if len(parts) > 1 else text
     points = []
     for raw_name, lat, lon in POINT.findall(source):
-        name = re.sub(r"[*\-\[\]#]", "", raw_name).strip()
+        # Only Markdown around the name goes: hyphens inside it stay ("Canal Saint-Martin").
+        name = re.sub(r"^[\s*#\[\]-]+|[\s*#\[\]]+$", "", raw_name).strip()
         lat, lon = float(lat), float(lon)
-        if name and -90 <= lat <= 90 and -180 <= lon <= 180:
+        if name and name.lower() != "name" and -90 <= lat <= 90 and -180 <= lon <= 180:
             points.append({"name": name, "lat": lat, "lon": lon})
     return points
 
@@ -105,7 +117,7 @@ def create_pdf(destination, content):
         if not line:
             pdf.ln(2)
             continue
-        heading = re.match(r"^#{1,6}\s+(.*)$", line)
+        heading = re.match(r"^#{1,6}\s+(?:[^\w\s(]+\s*)?(.*)$", line)  # without a leading emoji
         if heading:
             pdf.ln(3)
             pdf.set_font(font, "B", 13)

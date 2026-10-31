@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Travel Planner — a short briefing for your next trip</title>
-<meta name="description" content="Pick a city and a month. It researches the web and writes a short travel briefing: what to eat, where to stay, getting around, scams to avoid and the weather, with a map and sources.">
+<meta name="description" content="Pick a city and a month. It researches the web and writes a short travel briefing: local dishes, neighbourhoods, getting around, scams to avoid and the weather, with a map and sources.">
 <meta name="author" content="Jacopo Fornesi">
 <link rel="canonical" href="https://jfor12.github.io/ai-travel-planner/">
 <meta name="color-scheme" content="light dark">
@@ -36,8 +36,11 @@
       AI Travel Planner
     </a>
     <nav class="top__nav" aria-label="Site">
-      <a href="https://github.com/Jfor12/ai-travel-planner">How it works</a>
-      <button type="button" class="linkish" id="theme-toggle" aria-pressed="false">Dark mode</button>
+      <a href="#how">How it works</a>
+      <button type="button" class="theme" id="theme-toggle" aria-pressed="false" aria-label="Dark mode" title="Dark mode is off">
+        <svg class="theme__sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2M12 19.5v2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M2.5 12h2M19.5 12h2M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>
+        <svg class="theme__moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4 8.5 8.5 0 1 0 20 14.5z"/></svg>
+      </button>
     </nav>
   </div>
 </header>
@@ -47,7 +50,7 @@
     <div>
       <p class="intro__kicker">Bon voyage</p>
       <h1>Know before <span>you go</span></h1>
-      <p class="intro__lede">Pick a city and a month. It searches the web and writes a short briefing: what to eat, which neighbourhoods suit you, how to get around, the scams to avoid and what the weather will be like.</p>
+      <p class="intro__lede">Pick a city and a month. It searches the web and writes a short briefing: local dishes and where to try them, neighbourhoods worth knowing, getting around, scams to watch for and the weather that month.</p>
     </div>
     <figure class="poster" aria-hidden="true">
     <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMax slice" focusable="false">
@@ -67,8 +70,8 @@
 
   <form class="ask" id="ask-form" novalidate>
     <div class="ask__field">
-      <label for="destination">Destination</label>
-      <select id="destination" name="destination" required>
+      <div class="ask__label"><label for="destination">Destination</label><span class="ask__hint" id="destination-hint">10 cities for now</span></div>
+      <select id="destination" name="destination" required aria-describedby="destination-hint">
         <option value="">Choose a city</option>
         <option value="Paris">Paris, France</option>
         <option value="Tokyo">Tokyo, Japan</option>
@@ -95,7 +98,16 @@
   </form>
   <p class="fine">Written by AI from web research, so check anything important with official sources. Saved trips are visible to everyone. New briefings are limited to five an hour.</p>
 
+  <div class="existing" id="existing" role="group" aria-labelledby="existing-text" hidden>
+    <p id="existing-text">A briefing for this already exists. Open it, or write a fresh one?</p>
+    <div class="actions">
+      <button type="button" class="button" id="existing-open">Open it</button>
+      <button type="button" class="button button--quiet" id="existing-fresh">Write a fresh one</button>
+    </div>
+  </div>
+
   <p class="status" id="status" role="status" aria-live="polite"></p>
+  <div class="status-actions actions" id="status-actions" hidden></div>
 
   <section class="result" id="result" aria-labelledby="result-title" hidden tabindex="-1">
     <div class="result__head">
@@ -125,7 +137,7 @@
       <h3 id="chat-title">Ask about this briefing</h3>
       <form class="chat__form" id="chat-form">
         <label class="vh" for="question">Your question</label>
-        <input type="text" id="question" maxlength="500" autocomplete="off" placeholder="e.g. Which neighbourhood is quietest in the evening?">
+        <input type="text" id="question" maxlength="500" autocomplete="off" placeholder="e.g. Where is quiet at night?">
         <button type="submit" class="button" id="ask">Ask</button>
       </form>
       <div class="chat__answer" id="answer" aria-live="polite"></div>
@@ -136,10 +148,26 @@
     <div class="result__head">
       <div>
         <p class="kicker">Shared with everyone</p>
-        <h2 id="saved-title">Saved trips</h2>
+        <h2 id="saved-title" tabindex="-1">Saved trips</h2>
+      </div>
+      <div class="filter">
+        <label for="trip-filter">Filter</label>
+        <input type="search" id="trip-filter" placeholder="City or month" autocomplete="off" aria-describedby="trip-count">
       </div>
     </div>
+    <p class="hint" id="trip-count" aria-live="polite"></p>
     <ul class="trips" id="trips"></ul>
+  </section>
+
+  <section class="how" id="how" aria-labelledby="how-title" tabindex="-1">
+    <h2 id="how-title">How it works</h2>
+    <ol>
+      <li><strong>It searches the web.</strong> Five focused searches (with Tavily) about local food, neighbourhoods, scams, getting around and the weather in your month.</li>
+      <li><strong>An AI model writes the briefing</strong> (on Groq) from those search results, in a fixed set of sections. The server checks every section holds what its title says, repairs what it can and asks again if needed.</li>
+      <li><strong>Places are checked on a real map.</strong> Neighbourhoods and the restaurants and markets it names are looked up on OpenStreetMap. Only the ones it finds near the city get a pin.</li>
+      <li><strong>Briefings are kept for 90 days</strong>, so asking again for the same city and month is instant. Saved trips are shared with everyone who uses the planner.</li>
+    </ol>
+    <p class="hint">It doesn't know your budget or travel style: every visitor gets the same briefing for a city and month. Check anything important with official sources.</p>
   </section>
 </main>
 

@@ -62,7 +62,7 @@ def distance_km(a, b):
 
 
 def verify_locations(destination, locations):
-    """Replace model-guessed coordinates with geocoded ones.
+    """Coordinates for places, from the geocoder. Each location is {"name"} or {"name", "lat", "lon"}.
 
     Places the geocoder can't find, or finds far from the destination, are
     dropped: no pin is better than a wrong one. If the geocoder is down, the
@@ -70,6 +70,7 @@ def verify_locations(destination, locations):
     """
     if not locations:
         return locations
+    guessed = [loc for loc in locations if loc.get("lat") is not None and loc.get("lon") is not None]
     try:
         centre = geocode(destination)
         verified = []
@@ -79,4 +80,4 @@ def verify_locations(destination, locations):
                 verified.append({"name": loc["name"], "lat": round(point[0], 5), "lon": round(point[1], 5)})
         return verified
     except GeocoderUnavailable:
-        return locations
+        return guessed  # names without coordinates can't be pinned

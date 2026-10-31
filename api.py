@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 # Import core modules
 from ai import generate_guide, get_intel_model, run_chat_response
 from geo import verify_locations
-from maps import compose_guide, create_pdf, extract_map_data, guide_is_complete
+from maps import compose_guide, create_pdf, extract_map_data, guide_is_complete, is_current_format
 from db import (
     cache_guide, ensure_schema, get_cached_guide, get_connection, get_history,
     get_itinerary_details, save_itinerary, update_itinerary, delete_itinerary,
@@ -160,6 +160,8 @@ class TravelRequest(BaseModel):
     # the server decides which model to use.
     destination: str
     month: str
+    # True: write a new guide even if one is cached ("Write a fresh one"). Still rate limited.
+    fresh: bool = False
 
     _check_destination = field_validator("destination")(_destination)
     _check_month = field_validator("month")(_month)
@@ -304,7 +306,7 @@ def generate_travel_intel(request: TravelRequest, http_request: Request):
     has_db = bool(os.getenv("DATABASE_URL"))
 
     # Check cache first to avoid unnecessary API calls
-    if has_db:
+    if has_db and not request.fresh:
         try:
             cached = get_cached_guide(request.destination, request.month)
         except Exception:
@@ -313,6 +315,8 @@ def generate_travel_intel(request: TravelRequest, http_request: Request):
         if cached and not guide_is_complete(cached):
             log.warning("Ignoring an empty cached guide for %s / %s", request.destination, request.month)
             cached = None
+        if cached and not is_current_format(cached):
+            cached = None  # written before the checked format (31 Oct 2026): write it again
         if cached:
             return {"destination": request.destination, "month": request.month,
                     "intel": cached, "locations": _locations(cached), "cached": True}
@@ -328,9 +332,9 @@ def generate_travel_intel(request: TravelRequest, http_request: Request):
         raise HTTPException(status_code=503, detail="Guide generation is not available right now")
 
     try:
-        text, sources = generate_guide(request.destination, request.month)
-        # Pins come from OpenStreetMap, not from coordinates the model guessed.
-        locations = verify_locations(request.destination, extract_map_data(text))
+        text, sources, places = generate_guide(request.destination, request.month)
+        # Pins come from OpenStreetMap: the neighbourhoods, then restaurants and markets named for the dishes.
+        locations = verify_locations(request.destination, places)
         full_intel = compose_guide(text, sources, locations)
     except Exception:
         raise _server_error("generate the guide")
