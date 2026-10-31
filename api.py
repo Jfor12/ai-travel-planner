@@ -456,7 +456,10 @@ def get_itinerary(trip_id: int):
         raise _server_error("load the trip")
     if not details:
         raise HTTPException(status_code=404, detail="Itinerary not found")
-    return {"destination": details[0], "guide_text": details[1], "locations": _locations(details[1])}
+    return {"destination": details[0], "guide_text": details[1], "locations": _locations(details[1]),
+            "saved_at": details[2].isoformat() if len(details) > 2 and details[2] else None,
+            # Saved before briefings were checked section by section (31 Oct 2026): the page says so.
+            "current_format": is_current_format(details[1])}
 
 
 @app.put("/api/itinerary/{trip_id}", dependencies=[Depends(require_admin)])

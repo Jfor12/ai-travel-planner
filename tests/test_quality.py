@@ -262,7 +262,7 @@ def fake_groq(monkeypatch):
     threading.Thread(target=server.serve_forever, daemon=True).start()
     monkeypatch.setenv("GROQ_API_BASE", f"http://127.0.0.1:{server.server_port}")
     monkeypatch.delenv("GROQ_REASONING_EFFORT", raising=False)
-    monkeypatch.setattr(ai, "research", lambda d, m: [{"url": "https://example.com", "content": "Monti is next to the Forum."}])
+    monkeypatch.setattr(ai, "research", lambda d, m: [{"url": "https://example.com", "content": "Monti is next to the Forum. Try cacio e pepe at Felice a Testaccio, suppli from any pizzeria and carciofi alla romana in spring."}])
     monkeypatch.setattr(ai, "get_available_models", lambda: {"openai/gpt-oss-120b", "openai/gpt-oss-20b"})
     yield type("FakeGroq", (), {"seen": seen, "replies": replies})
     server.shutdown()
@@ -448,3 +448,19 @@ def test_places_without_coordinates_are_dropped_when_the_geocoder_is_down(monkey
     monkeypatch.setattr(geo, "_fetch", down)
     assert geo.verify_locations("Rome", [{"name": "Monti"}, {"name": "Colosseum", "lat": 41.89, "lon": 12.49}]) == [
         {"name": "Colosseum", "lat": 41.89, "lon": 12.49}]
+
+
+def test_dishes_and_venues_must_be_in_the_research():
+    data = json.loads(GOOD_JSON)
+    data["food"].append({"dish": "Burnt Pie", "description": "A pie", "where_to_try": "Pubs", "places": []})
+    data["food"][0]["places"] = ["Felice a Testaccio", "Invented Trattoria"]
+    data["food"][1]["where_to_try"] = "Breakfast at The Wolseley"
+    data["food"][1]["places"] = ["The Wolseley"]
+    research = "Rome's classics: Cacio e pepe (Felice a Testaccio is famous for it), supplì and carciofi alla romana."
+    guide, problems = ai.validate_guide(data, research=research)
+    assert [f["dish"] for f in guide["food"]] == ["Cacio e pepe", "Supplì", "Carciofi alla romana"]
+    assert guide["food"][0]["places"] == ["Felice a Testaccio"]
+    assert guide["food"][1]["places"] == [] and guide["food"][1]["where_to_try"] == ""  # it named a dropped venue
+    assert problems == []
+    # Without research to check against, nothing is dropped for it.
+    assert len(ai.validate_guide(data, research=ai.NO_RESEARCH)[0]["food"]) == 4

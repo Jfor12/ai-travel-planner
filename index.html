@@ -21,7 +21,7 @@
 <link rel="stylesheet" href="styles.css">
 <script>
   // Apply a saved theme before first paint to avoid a flash.
-  try { const t = localStorage.getItem('theme'); if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t; } catch {}
+  try { const t = localStorage.getItem('travel:theme') ?? localStorage.getItem('theme'); if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t; } catch {}
 </script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="" defer></script>
 <script type="module" src="app.js"></script>
@@ -123,6 +123,11 @@
       </div>
     </div>
 
+    <div class="old-format" id="old-format" role="note" hidden>
+      <p id="old-format-text"></p>
+      <button type="button" class="button button--quiet" id="old-format-fresh">Write a fresh one</button>
+    </div>
+
     <div class="result__body">
       <article class="guide" id="guide"></article>
 
@@ -165,7 +170,7 @@
       <li><strong>It searches the web.</strong> Five focused searches (with Tavily) about local food, neighbourhoods, scams, getting around and the weather in your month.</li>
       <li><strong>An AI model writes the briefing</strong> (on Groq) from those search results, in a fixed set of sections. The server checks every section holds what its title says, repairs what it can and asks again if needed.</li>
       <li><strong>Places are checked on a real map.</strong> Neighbourhoods and the restaurants and markets it names are looked up on OpenStreetMap. Only the ones it finds near the city get a pin.</li>
-      <li><strong>Briefings are kept for 90 days</strong>, so asking again for the same city and month is instant. Saved trips are shared with everyone who uses the planner.</li>
+      <li><strong>New briefings are kept for 90 days</strong>, so asking again for the same city and month within that time is instant. Saved trips are shared with everyone and stay until they're removed, so each one shows when it was saved; older ones can be out of date, and you can write a fresh one.</li>
     </ol>
     <p class="hint">It doesn't know your budget or travel style: every visitor gets the same briefing for a city and month. Check anything important with official sources.</p>
   </section>

@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import re
+import unicodedata
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -197,7 +198,7 @@ Reply with one JSON object and nothing else, in exactly this shape:
 }}
 
 Rules for each section:
-- food: 3 to 5 dishes from local or national cuisine. No international food (no "Sichuan-style" or "Middle Eastern-inspired" dishes) and no cuisines in general.
+- food: 3 to 5 dishes from local or national cuisine, each one named in the research notes, under the name the notes use. No international food (no "Sichuan-style" or "Middle Eastern-inspired" dishes) and no cuisines in general. Only put a restaurant or market in "places" if the research notes name it for that dish.
 - neighbourhoods: 3 or 4 real neighbourhoods, districts or quarters. Never a market, restaurant, museum, landmark or single street.
 - scams: 2 to 4 specific scams that target visitors here, each with its usual name. Not general advice such as "watch your bag".
 - weather: high_c and low_c are the typical daily high and low in degrees Celsius for {month}, as numbers. Nothing in "rain" or "summary" may contradict them.
@@ -216,6 +217,9 @@ GENERIC_SCAM = re.compile(
 BRITISH = {"neighborhood": "neighbourhood", "Neighborhood": "Neighbourhood", "favorite": "favourite", "Favorite": "Favourite",
            "flavor": "flavour", "Flavor": "Flavour", "theater": "theatre", "Theater": "Theatre"}
 CROWD_LEVELS = {"low": "Low", "quiet": "Low", "medium": "Medium", "moderate": "Medium", "high": "High", "busy": "High", "very high": "High"}
+
+
+NO_RESEARCH = "(no research results)"
 
 
 class GuideFormatError(ValueError):
@@ -258,11 +262,28 @@ def _number(value):
     return number if -40 <= number <= 55 else None
 
 
-def validate_guide(data):
+def _plain(text):
+    """Lower case, no accents, "&" as "and", punctuation as spaces: for matching names against the research."""
+    text = unicodedata.normalize("NFKD", str(text)).encode("ascii", "ignore").decode().lower().replace("&", " and ")
+    return " " + " ".join(re.sub(r"[^a-z0-9]+", " ", text).split()) + " "
+
+
+def _in_research(name, research):
+    """True if the research notes mention this name (the part before any brackets), as whole words."""
+    key = _plain(re.sub(r"\(.*?\)", "", name)).strip()
+    return bool(key) and f" {key} " in research
+
+
+def validate_guide(data, research=None):
     """Repairs what can be repaired and returns (guide, problems). Items that break a section's rule are dropped;
-    `problems` lists what is still wrong. An empty list means the guide meets every rule."""
+    `problems` lists what is still wrong. An empty list means the guide meets every rule.
+
+    With the research notes given, dishes and the restaurants or markets named for them must appear in the
+    notes (31 Oct 2026: guides had invented dishes, such as London's "Burnt Pie", and venues the research
+    never mentioned). A "where to try it" that names a dropped venue goes too."""
     problems = []
     guide = {}
+    notes = _plain(research) if research and research.strip() and research != NO_RESEARCH else None
 
     food = []
     for item in data.get("food") or []:
@@ -271,9 +292,14 @@ def validate_guide(data):
         dish, description = _text(item.get("dish"), 80), _text(item.get("description"))
         if not dish or not description or NOT_LOCAL_FOOD.search(dish):
             continue
-        places = [_text(p, 80) for p in item.get("places") or [] if isinstance(p, str)]
-        food.append({"dish": dish, "description": description, "where_to_try": _text(item.get("where_to_try"), 200),
-                     "places": [p for p in places if p][:2]})
+        if notes is not None and not _in_research(dish, notes):
+            continue
+        places = [p for p in (_text(p, 80) for p in item.get("places") or [] if isinstance(p, str)) if p]
+        kept = [p for p in places if notes is None or _in_research(p, notes)]
+        where = _text(item.get("where_to_try"), 200)
+        if any(_plain(p).strip() in _plain(where) for p in places if p not in kept):
+            where = ""
+        food.append({"dish": dish, "description": description, "where_to_try": where, "places": kept[:2]})
     guide["food"] = food
 
     neighbourhoods, seen = [], set()
@@ -393,7 +419,7 @@ def generate_guide(destination, month):
         raise RuntimeError("Missing API keys for generation")
 
     docs = research(destination, month)
-    context = "\n".join(f"- {d['content']} (Source: {d['url']})" for d in docs) or "(no research results)"
+    context = "\n".join(f"- {d['content']} (Source: {d['url']})" for d in docs) or NO_RESEARCH
 
     model = get_intel_model()
     # If the model runs out of budget while reasoning it returns an empty or cut-off answer (finish_reason
@@ -414,7 +440,7 @@ def generate_guide(destination, month):
         if finish_reason == "length":
             continue
         try:
-            guide, problems = validate_guide(parse_guide_json(text))
+            guide, problems = validate_guide(parse_guide_json(text), research=context)
         except GuideFormatError:
             continue
         if not problems:

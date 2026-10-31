@@ -21,7 +21,11 @@ The frontend is a static single-page application hosted on GitHub Pages. The bac
 
 - Destination and month-specific travel guides, in fixed sections: Food (local dishes and where to try them), Neighbourhoods, Logistics (tipping, getting around), Scams, and Weather and crowds
 - Five focused Tavily searches, then Groq writes the guide as JSON in a fixed shape. The server checks it (`validate_guide` in `ai.py`): markets and venues are dropped from Neighbourhoods, international food from Food, generic advice from Scams; weather lines that contradict the typical temperatures go, and the crowd level must be low, medium or high. Anything it can't repair is asked for again once. Only then is the Markdown written (`render_guide`), with the sources listed
-- Guides cached before this format are written again on the next request
+- Dishes, and the restaurants and markets named for them, must appear in the research notes; anything the notes don't mention is dropped (no invented dishes or venues)
+- Guides cached before this format are written again on the next request. Saved trips are kept as they were: an older one says when it was saved and offers to write a fresh one
+- Each view has its own history entry, so the back button returns to the previous view; going back to a briefing doesn't ask the server again
+- Map pins that would overlap are nudged apart at every zoom
+- The theme choice is stored as `travel:theme` (the apps on jfor12.github.io share one storage area)
 - Before writing a new briefing, the page offers a saved trip for the same city and month (open it, or write a fresh one)
 - Saved trips grouped by city, newest briefing per month, with a filter
 - Cached guides to reduce repeated API usage (only the server writes to the cache)

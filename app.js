@@ -96,21 +96,54 @@ function show(view) {
     $('#show-saved').setAttribute('aria-pressed', String(view === 'saved'));
 }
 
-function setUrl(params) {
+// Each view gets its own history entry, so the back button (or a phone's back gesture) returns to the previous
+// view instead of leaving the site. The entry keeps the briefing itself, so going back never asks the server again.
+function setUrl(params, { push = false, state = null } = {}) {
     const query = new URLSearchParams(params).toString();
-    history.replaceState(null, '', query ? `?${query}` : window.location.pathname);
+    const same = query ? location.search === `?${query}` : !location.search;
+    if (push && !same) history.pushState(state, '', query ? `?${query}` : location.pathname);
+    else history.replaceState(state, '', query ? `?${query}` : location.pathname);
 }
 
-function renderResult({ destination, month, text, locations, tripId = null, cached = false }) {
+function showHome() {
+    show('none');
+    $('#existing').hidden = true;
+    setStatus();
+    window.scrollTo({ top: 0, behavior: reducedMotion() ? 'auto' : 'smooth' });
+    $('#main').focus({ preventScroll: true });
+}
+
+addEventListener('popstate', event => {
+    const state = event.state;
+    if (state?.view === 'result' && state.data) return renderResult(state.data);
+    const params = new URLSearchParams(location.search);
+    if (state?.view === 'saved' || params.get('trips')) return showSaved({ push: false });
+    if (params.get('trip')) return openTrip(params.get('trip'), { push: false });
+    showHome();
+});
+
+const savedDate = iso => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+function renderResult(data) {
+    const { destination, month, text, locations, tripId = null, cached = false, savedAt = null, currentFormat = true } = data;
     current = { destination, month, text, locations, tripId };
     show('result');
     $('#existing').hidden = true;
     $('#result-kicker').textContent = tripId ? 'Saved trip' : 'Briefing';
     $('#result-title').textContent = month ? `${destination} in ${month}` : tripName(destination);
     $('#result-meta').textContent = [
-        tripId ? 'From the shared trips' : cached ? 'Written earlier for this month' : 'Written just now',
+        tripId ? `From the shared trips${savedAt ? `, saved ${savedDate(savedAt)}` : ''}` : cached ? 'Written earlier for this month' : 'Written just now',
         locations.length ? `${locations.length} place${locations.length === 1 ? '' : 's'} on the map` : null,
     ].filter(Boolean).join(' · ');
+
+    // A trip saved before briefings were checked section by section: say so, and offer a new one.
+    const old = $('#old-format');
+    const trip = parseTrip(destination);
+    old.hidden = !(tripId && currentFormat === false && trip.month);
+    if (!old.hidden) {
+        $('#old-format-text').textContent = `This briefing was saved${savedAt ? ` on ${savedDate(savedAt)}` : ''}, before each section was checked, so some sections may hold the wrong things (a market under Neighbourhoods, say) and it has no Scams section.`;
+        $('#old-format-fresh').onclick = () => generate(trip.city, trip.month, { fresh: true });
+    }
 
     const guide = $('#guide');
     guide.innerHTML = markdownToHtml(text, { headingOffset: 1, icons: true });
@@ -162,7 +195,40 @@ function linkPlaces(guide, locations) {
     }
 }
 
+// Pins closer together than this (in pixels) are nudged apart, so none hides another; each still points close
+// to its place.
+const PIN_GAP = 32;
+let activePin = null;
+const pinIcon = (i, dx = 0, dy = 0) => L.divIcon({
+    className: '', html: `<div class="pin${i === activePin ? ' pin--active' : ''}"><span>${i + 1}</span></div>`,
+    iconSize: [28, 28], iconAnchor: [14 - dx, 28 - dy], popupAnchor: [dx, dy - 26],
+});
+function declutter() {
+    if (!map) return;
+    const origin = markers.map(marker => map.latLngToLayerPoint(marker.getLatLng()));
+    const pos = origin.map(p => ({ x: p.x, y: p.y }));
+    // Push overlapping pairs apart, a little at a time, until none overlap.
+    for (let round = 0; round < 60; round++) {
+        let moved = false;
+        for (let i = 0; i < pos.length; i++) {
+            for (let j = i + 1; j < pos.length; j++) {
+                let dx = pos[j].x - pos[i].x, dy = pos[j].y - pos[i].y;
+                let d = Math.hypot(dx, dy);
+                if (d >= PIN_GAP) continue;
+                if (d < 0.01) { dx = Math.cos(i + j); dy = Math.sin(i + j); d = 1; }
+                const push = (PIN_GAP - d) / 2 + 0.5;
+                pos[i].x -= (dx / d) * push; pos[i].y -= (dy / d) * push;
+                pos[j].x += (dx / d) * push; pos[j].y += (dy / d) * push;
+                moved = true;
+            }
+        }
+        if (!moved) break;
+    }
+    markers.forEach((marker, i) => marker.setIcon(pinIcon(i, Math.round(pos[i].x - origin[i].x), Math.round(pos[i].y - origin[i].y))));
+}
+
 function renderMap(locations) {
+    activePin = null;
     const mapEl = $('#map');
     if (map) { map.remove(); map = null; }
     markers = [];
@@ -183,19 +249,23 @@ function renderMap(locations) {
         maxZoom: 19,
     }).addTo(map);
     markers = locations.map((loc, i) => L.marker([loc.lat, loc.lon], {
-        icon: L.divIcon({ className: '', html: `<div class="pin"><span>${i + 1}</span></div>`, iconSize: [28, 28], iconAnchor: [14, 28], popupAnchor: [0, -26] }),
+        icon: pinIcon(i),
         title: loc.name,
         alt: loc.name,
     }).bindPopup(escapeHtml(loc.name)).addTo(map));
-    if (locations.length > 1) map.fitBounds(L.featureGroup(markers).getBounds().pad(0.2));
-    else map.setView([locations[0].lat, locations[0].lon], 13);
+    map.on('zoomend', declutter);
+    // Fit the places closely (central places can sit a few hundred metres apart).
+    if (locations.length > 1) map.fitBounds(L.featureGroup(markers).getBounds().pad(0.08), { maxZoom: 15 });
+    else map.setView([locations[0].lat, locations[0].lon], 14);
+    declutter();
 }
 
 function showPlace(i) {
     if (!map) return;
     const loc = current.locations[i];
-    markers.forEach((marker, n) => marker.getElement()?.querySelector('.pin')?.classList.toggle('pin--active', n === i));
-    map.setView([loc.lat, loc.lon], 15);
+    activePin = i;
+    map.setView([loc.lat, loc.lon], 16);
+    declutter();
     markers[i].openPopup();
     // On phones the map is below the text: bring it into view.
     const box = $('#map').getBoundingClientRect();
@@ -227,8 +297,9 @@ async function generate(destination, month, { fresh = false } = {}) {
     try {
         const data = await (await api('/api/generate-intel', { method: 'POST', body: JSON.stringify({ destination, month, fresh }) })).json();
         setStatus();
-        renderResult({ destination: data.destination, month: data.month, text: data.intel, locations: data.locations || [], cached: data.cached });
-        setUrl({ destination: data.destination, month: data.month });
+        const result = { destination: data.destination, month: data.month, text: data.intel, locations: data.locations || [], cached: data.cached };
+        renderResult(result);
+        setUrl({ destination: data.destination, month: data.month }, { push: true, state: { view: 'result', data: result } });
     } catch (error) {
         failed(error, () => generate(destination, month, { fresh }));
     } finally {
@@ -372,9 +443,9 @@ function renderTrips() {
             </li>`).join('');
 }
 
-async function showSaved() {
+async function showSaved({ push = true } = {}) {
     show('saved');
-    setUrl({ trips: '1' });
+    setUrl({ trips: '1' }, { push, state: { view: 'saved' } });
     $('#existing').hidden = true;
     // Bring the list into view and say where we are, on phones too (it opens below the form).
     $('#saved').scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
@@ -396,20 +467,22 @@ async function showSaved() {
 
 $('#trip-filter').addEventListener('input', () => { if (trips) renderTrips(); });
 
-async function openTrip(id) {
+async function openTrip(id, { push = true } = {}) {
     busy('Opening the trip…');
     try {
         const data = await (await api(`/api/itinerary/${Number(id)}`)).json();
         setStatus();
-        renderResult({ destination: data.destination, month: '', text: data.guide_text, locations: data.locations || [], tripId: Number(id) });
-        setUrl({ trip: id });
+        const result = { destination: data.destination, month: '', text: data.guide_text, locations: data.locations || [], tripId: Number(id),
+            savedAt: data.saved_at || null, currentFormat: data.current_format !== false };
+        renderResult(result);
+        setUrl({ trip: id }, { push, state: { view: 'result', data: result } });
     } catch (error) {
         failed(error, () => openTrip(id));
     }
 }
 
-$('#show-saved').addEventListener('click', showSaved);
-$('#back').addEventListener('click', showSaved);
+$('#show-saved').addEventListener('click', () => showSaved());
+$('#back').addEventListener('click', () => showSaved());
 $('#trips').addEventListener('click', event => {
     const button = event.target.closest('[data-trip]');
     if (button) openTrip(button.dataset.trip);
@@ -428,7 +501,8 @@ const syncTheme = () => {
 themeButton.addEventListener('click', () => {
     const next = isDark() ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
-    try { localStorage.setItem('theme', next); } catch {}
+    // "travel:" because every app on jfor12.github.io shares one storage area.
+    try { localStorage.setItem('travel:theme', next); } catch {}
     syncTheme();
 });
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', syncTheme);
@@ -442,9 +516,9 @@ fetch(`${API_URL}/health`).catch(() => {});
 const params = new URLSearchParams(window.location.search);
 $('#month').value = MONTHS[new Date().getMonth()];
 if (params.get('trip')) {
-    openTrip(params.get('trip'));
+    openTrip(params.get('trip'), { push: false });
 } else if (params.get('trips')) {
-    showSaved();
+    showSaved({ push: false });
 } else if (params.get('destination') && MONTHS.includes(params.get('month'))) {
     const option = [...$('#destination').options].find(o => o.value === params.get('destination'));
     if (option) {
